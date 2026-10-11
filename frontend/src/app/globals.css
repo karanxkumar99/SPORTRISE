@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+  }
+
+  body {
+    background-color: #090d16;
+    color: #f8fafc;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
+
+/* Print Styles for Athlete ID Passport Card */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #athlete-id-card,
+  #athlete-id-card * {
+    visibility: visible;
+  }
+  #athlete-id-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 480px;
+    box-shadow: none !important;
+    border: 2px solid #000 !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+}
