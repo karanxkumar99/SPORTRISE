@@ -9,5 +9,6 @@ router.post("/verify-otp", AuthController.verifyOtp);
 router.post("/resend-otp", AuthController.resendOtp);
 router.post("/login", AuthController.login);
 router.get("/profile", requireAuth, AuthController.getProfile);
+router.put("/profile", requireAuth, AuthController.updateProfile);
 
 export default router;

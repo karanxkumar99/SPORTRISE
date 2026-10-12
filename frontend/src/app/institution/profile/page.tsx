@@ -49,6 +49,9 @@ export default function InstitutionProfilePage() {
   const [coordinatorName, setCoordinatorName] = useState("");
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorPhone, setCoordinatorPhone] = useState("");
+  const [supportedSports, setSupportedSports] = useState("");
+  const [facilities, setFacilities] = useState("");
+  const [coaches, setCoaches] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -98,6 +101,9 @@ export default function InstitutionProfilePage() {
       setCoordinatorName(institution.coordinatorName || "");
       setCoordinatorEmail(institution.coordinatorEmail || "");
       setCoordinatorPhone(institution.coordinatorPhone || "");
+      setSupportedSports(Array.isArray((institution as any).supportedSports) ? (institution as any).supportedSports.join(", ") : "");
+      setFacilities(typeof (institution as any).facilities === "string" ? (institution as any).facilities : "");
+      setCoaches(Array.isArray((institution as any).coaches) ? (institution as any).coaches.join("\n") : "");
     }
   }, [institution]);
 
@@ -107,6 +113,9 @@ export default function InstitutionProfilePage() {
     setMessage(null);
 
     try {
+      const sportsList = supportedSports.split(",").map(s => s.trim()).filter(Boolean);
+      const coachesList = coaches.split("\n").map(s => s.trim()).filter(Boolean);
+
       const res = await api.put("/institutions/profile", {
         name,
         type,
@@ -125,6 +134,9 @@ export default function InstitutionProfilePage() {
         coordinatorName,
         coordinatorEmail,
         coordinatorPhone,
+        supportedSports: sportsList,
+        facilities,
+        coaches: coachesList,
       });
 
       if (res.data?.success) {
@@ -483,6 +495,55 @@ export default function InstitutionProfilePage() {
                   required
                   value={coordinatorPhone}
                   onChange={(e) => setCoordinatorPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Sports Infrastructure & Coaching Staff */}
+          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-400" />
+              4. Sports Infrastructure, Supported Disciplines & Coaching Staff
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Supported Sports Disciplines (Comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Athletics, Cricket, Football, Basketball, Badminton"
+                  value={supportedSports}
+                  onChange={(e) => setSupportedSports(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Campus Facilities & Grounds Overview
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. 400m synthetic running track, 2 turf cricket nets, Olympic-sized swimming pool, indoor wooden badminton court"
+                  value={facilities}
+                  onChange={(e) => setFacilities(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Coaching Staff & Mentors (One per line)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Rajesh Kumar (NIS Certified Athletics Coach)&#10;Vikram Singh (Head Cricket Coach, BCCI Level 2)"
+                  value={coaches}
+                  onChange={(e) => setCoaches(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
                 />
               </div>

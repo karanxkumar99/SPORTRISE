@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useInstitution } from "../../../../lib/institution-context";
-import api from "../../../../lib/api";
-import { ALL_INDIAN_STATES } from "../../../../data/india-locations";
+import { useInstitution } from "@/lib/institution-context";
+import api from "@/lib/api";
+import { ALL_INDIAN_STATES } from "@/data/india-locations";
 import { getCurrentGPSCoordinates, reverseGeocodeCoordinates } from "@/lib/location-utils";
 import {
   School,
@@ -128,13 +128,21 @@ export default function InstitutionRegisterPage() {
       const res = await api.post("/institutions/register", payload);
 
       if (res.data?.success) {
-        login(res.data.token, res.data.institution);
-        router.push("/institution/dashboard");
+        if (res.data?.requiresVerification || !res.data?.token) {
+          router.push(`/institution/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+        } else {
+          login(res.data.token, res.data.institution);
+          router.push("/institution/dashboard");
+        }
       } else {
         setError(res.data?.message || "Registration failed.");
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      if (err.response?.status === 429) {
+        setError(err.response?.data?.message || "Please wait before requesting a new code.");
+      } else {
+        setError(err.response?.data?.message || (err as Error).message);
+      }
     } finally {
       setLoading(false);
     }
@@ -223,7 +231,7 @@ export default function InstitutionRegisterPage() {
                 <input
                   type="tel"
                   required
-                  placeholder="+91 11 2345 6789"
+                  placeholder="+91 XXXXXXXXXX"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
@@ -442,7 +450,7 @@ export default function InstitutionRegisterPage() {
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 XXXXXXXXXX"
                   value={authorizedPersonContact}
                   onChange={(e) => setAuthorizedPersonContact(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
@@ -470,7 +478,7 @@ export default function InstitutionRegisterPage() {
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98111 22233"
+                  placeholder="+91 XXXXXXXXXX"
                   value={coordinatorPhone}
                   onChange={(e) => setCoordinatorPhone(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"

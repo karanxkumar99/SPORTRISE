@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import apiRouter from "./routes";
 
 // Load environment variables
@@ -18,6 +19,10 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded evidence & media statically
+const uploadsPath = path.join(process.cwd(), "uploads");
+app.use("/uploads", express.static(uploadsPath));
 
 // Request logger in dev
 if (process.env.NODE_ENV !== "production") {
@@ -38,9 +43,12 @@ app.get("/", (req: Request, res: Response) => {
     endpoints: {
       health: "/api/health",
       auth: "/api/auth",
+      institutions: "/api/institutions",
+      matches: "/api/matches",
+      upload: "/api/upload",
+      events: "/api/events",
       sports: "/api/sports",
       ranking: "/api/ranking",
-      ai: "/api/ai",
     },
     documentation: "See README.md for complete API documentation and test guides.",
   });

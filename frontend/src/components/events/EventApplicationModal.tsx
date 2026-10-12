@@ -435,7 +435,7 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
                       required
                       value={contactNumber}
                       onChange={(e) => setContactNumber(e.target.value)}
-                      placeholder="e.g. 9876543210"
+                      placeholder="e.g. XXXXXXXXXX"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
                     />
                   </div>
@@ -475,7 +475,7 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
                       type="tel"
                       value={emergencyContact}
                       onChange={(e) => setEmergencyContact(e.target.value)}
-                      placeholder="e.g. 9811223344"
+                      placeholder="e.g. XXXXXXXXXX"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
                     />
                   </div>

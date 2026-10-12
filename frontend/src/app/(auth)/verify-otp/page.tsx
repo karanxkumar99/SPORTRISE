@@ -34,6 +34,7 @@ function VerifyOtpInner() {
 
   // 10-minute expiry countdown timer (600 seconds)
   const [timeLeft, setTimeLeft] = useState(600);
+  const [resendCooldown, setResendCooldown] = useState(15);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -51,6 +52,14 @@ function VerifyOtpInner() {
     return () => clearInterval(interval);
   }, [timeLeft]);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -59,6 +68,7 @@ function VerifyOtpInner() {
 
   const handleDigitChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
+    setError(null);
 
     const newDigits = [...otpDigits];
     newDigits[index] = value.slice(-1);
@@ -86,6 +96,7 @@ function VerifyOtpInner() {
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
+    setError(null);
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (!pasted) return;
 
@@ -104,7 +115,7 @@ function VerifyOtpInner() {
 
   const verifyCode = async (codeToVerify: string) => {
     if (!email) {
-      setError("Missing email address. Please return to registration.");
+      setError("Please enter your registered email address.");
       return;
     }
 
@@ -114,7 +125,7 @@ function VerifyOtpInner() {
     try {
       const res = await api.post("/auth/verify-otp", {
         email: email.trim().toLowerCase(),
-        otp: codeToVerify,
+        otp: codeToVerify.trim(),
       });
 
       if (res.data?.success) {
@@ -135,15 +146,15 @@ function VerifyOtpInner() {
 
         sessionStorage.removeItem("sportrise_pending_email");
 
-        // Super fast redirection to dashboard
         setTimeout(() => {
           router.push("/dashboard");
         }, 800);
       } else {
         setError(res.data?.message || "Invalid OTP code.");
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || "Invalid OTP code.";
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -160,21 +171,24 @@ function VerifyOtpInner() {
   };
 
   const handleResend = async () => {
-    if (!email) return;
+    if (!email || resendCooldown > 0 || resending) return;
     setResending(true);
     setError(null);
     setResendMessage(null);
 
     try {
-      const res = await api.post("/auth/resend-otp", { email });
+      const res = await api.post("/auth/resend-otp", { email: email.trim().toLowerCase() });
       if (res.data?.success) {
-        setTimeLeft(600);
+        setResendCooldown(15);
         setOtpDigits(["", "", "", "", "", ""]);
-        setResendMessage("A fresh verification code has been dispatched to your email address!");
+        setResendMessage("A fresh 6-digit verification code has been dispatched to your email!");
         inputRefs.current[0]?.focus();
+      } else {
+        setError(res.data?.message || "Failed to resend code.");
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || "Failed to resend code.";
+      setError(errMsg);
     } finally {
       setResending(false);
     }
@@ -246,6 +260,23 @@ function VerifyOtpInner() {
               </div>
             )}
 
+            {/* Email Fallback Input if missing */}
+            {!email && (
+              <div className="mt-4 text-left">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Registered Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e.g. athlete@gmail.com"
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            )}
+
             {/* 6-Digit Code Inputs */}
             <form onSubmit={handleVerify} className="mt-6 space-y-6">
               <div className="flex justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
@@ -276,11 +307,15 @@ function VerifyOtpInner() {
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={resending || timeLeft > 540}
-                  className="font-bold text-orange-400 hover:text-orange-300 disabled:opacity-40 transition-colors flex items-center gap-1"
+                  disabled={resending || resendCooldown > 0}
+                  className="font-bold text-orange-400 hover:text-orange-300 disabled:opacity-50 transition-colors flex items-center gap-1.5"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`} />
-                  Resend Code
+                  {resendCooldown > 0 ? (
+                    <span>Resend in {resendCooldown}s</span>
+                  ) : (
+                    <span>Resend Code</span>
+                  )}
                 </button>
               </div>
 

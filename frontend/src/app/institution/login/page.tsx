@@ -3,15 +3,15 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useInstitution } from "../../../../lib/institution-context";
-import api from "../../../../lib/api";
+import { useInstitution } from "@/lib/institution-context";
+import api from "@/lib/api";
 import {
   School,
   Mail,
   Lock,
   ArrowRight,
   AlertCircle,
-  Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function InstitutionLoginPage() {
@@ -46,17 +46,15 @@ export default function InstitutionLoginPage() {
         setError(res.data?.message || "Invalid credentials.");
       }
     } catch (err: any) {
-      setError(err.message || "Login failed.");
+      // Check if unverified
+      if (err.response?.status === 403 && err.response?.data?.requiresVerification) {
+        router.push(`/institution/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+        return;
+      }
+      setError(err.response?.data?.message || err.message || "Login failed.");
     } finally {
       setLoading(false);
     }
-  };
-
-  // 1-Click Demo Login fill
-  const handleDemoFill = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword("Institution@2026");
-    setError(null);
   };
 
   return (
@@ -92,7 +90,7 @@ export default function InstitutionLoginPage() {
             <input
               type="email"
               required
-              placeholder="e.g. sports@dpsrkp.net"
+              placeholder="e.g. sports@institution.edu"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
@@ -133,41 +131,18 @@ export default function InstitutionLoginPage() {
           </button>
         </form>
 
-        {/* 1-Click Demo Profiles */}
-        <div className="mt-8 pt-6 border-t border-slate-800">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span className="flex items-center gap-1 font-semibold text-blue-400">
-              <Zap className="w-3.5 h-3.5" /> 1-Click Demo Accounts:
-            </span>
-            <span className="text-[10px] text-slate-500">(Pass: Institution@2026)</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoFill("sports@dpsrkp.net")}
-              className="text-left p-2 rounded-lg bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/40 text-[11px] text-slate-300 transition-colors"
-            >
-              <strong className="block text-white truncate">DPS R.K. Puram</strong>
-              <span className="text-[10px] text-blue-400">School (Delhi)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoFill("sportsboard@ststephens.edu")}
-              className="text-left p-2 rounded-lg bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/40 text-[11px] text-slate-300 transition-colors"
-            >
-              <strong className="block text-white truncate">St. Stephen&apos;s</strong>
-              <span className="text-[10px] text-emerald-400">College (Delhi)</span>
-            </button>
+        <div className="mt-8 pt-6 border-t border-slate-800 text-center">
+          <p className="text-xs text-slate-400">
+            New School, College or Sports Academy?{" "}
+            <Link href="/institution/register" className="font-bold text-blue-400 hover:text-blue-300 underline">
+              Register Institution
+            </Link>
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Secure 6-digit email OTP authenticated portal</span>
           </div>
         </div>
-
-        <p className="text-center text-xs text-slate-400 mt-6">
-          New School or College?{" "}
-          <Link href="/institution/register" className="font-bold text-blue-400 hover:text-blue-300">
-            Register Institution
-          </Link>
-        </p>
       </div>
     </div>
   );

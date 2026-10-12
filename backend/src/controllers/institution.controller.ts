@@ -2,11 +2,13 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prisma";
+import OTPModel from "../models/OTP";
+import mailService from "../services/mail.service";
 import { AuthenticatedInstitutionRequest } from "../middleware/institutionAuth.middleware";
 
 export const InstitutionController = {
   /**
-   * Institution Registration Flow
+   * Institution Registration Flow with Real Email Verification
    */
   async register(req: Request, res: Response) {
     try {
@@ -31,6 +33,9 @@ export const InstitutionController = {
         coordinatorPhone,
         latitude,
         longitude,
+        supportedSports,
+        facilities,
+        coaches,
       } = req.body;
 
       // Validation
@@ -54,6 +59,37 @@ export const InstitutionController = {
       });
 
       if (existing) {
+        if (!existing.isVerified) {
+          try {
+            // Unverified institution exists: generate fresh OTP
+            const { plainOtp } = await OTPModel.createOtp({
+              email: normalizedEmail,
+              institutionId: existing.id,
+              userType: "INSTITUTION",
+            });
+
+            await mailService.sendOtpEmail({
+              to: normalizedEmail,
+              name: existing.name,
+              otp: plainOtp,
+              type: "INSTITUTION",
+            });
+
+            return res.status(200).json({
+              success: true,
+              isExistingUnverified: true,
+              email: normalizedEmail,
+              institutionName: existing.name,
+              message: "An unverified institution account exists. A fresh 6-digit verification code has been dispatched to your email address.",
+            });
+          } catch (cooldownErr: any) {
+            return res.status(429).json({
+              success: false,
+              message: cooldownErr.message,
+            });
+          }
+        }
+
         return res.status(409).json({
           success: false,
           message: "An institution with this email is already registered. Please log in.",
@@ -85,59 +121,176 @@ export const InstitutionController = {
           coordinatorPhone: coordinatorPhone.trim(),
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
-          isVerified: true, // auto-verified for onboarding ease
+          isVerified: false, // Must be verified via real OTP email
+          supportedSports: supportedSports ? (typeof supportedSports === "string" ? supportedSports : JSON.stringify(supportedSports)) : null,
+          facilities: facilities ? (typeof facilities === "string" ? facilities : JSON.stringify(facilities)) : null,
+          coaches: coaches ? (typeof coaches === "string" ? coaches : JSON.stringify(coaches)) : null,
         },
       });
 
-      // Initial welcome notification
+      // Generate secure 6-digit OTP
+      const { plainOtp } = await OTPModel.createOtp({
+        email: normalizedEmail,
+        institutionId: institution.id,
+        userType: "INSTITUTION",
+      });
+
+      // Dispatch real email OTP
+      await mailService.sendOtpEmail({
+        to: normalizedEmail,
+        name: institution.name,
+        otp: plainOtp,
+        type: "INSTITUTION",
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Institution registered! We sent a 6-digit verification code to your email address.",
+        email: institution.email,
+        institutionId: institution.id,
+        requiresVerification: true,
+      });
+    } catch (err: any) {
+      console.error("Institution Register Error:", err);
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Failed to register institution. Please check your data.",
+      });
+    }
+  },
+
+  /**
+   * Institution OTP Verification
+   */
+  async verifyOtp(req: Request, res: Response) {
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        return res.status(400).json({
+          success: false,
+          message: "Institution email and 6-digit OTP code are required.",
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const institution = await prisma.institution.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (!institution) {
+        return res.status(404).json({
+          success: false,
+          message: "No institution account found with this email.",
+        });
+      }
+
+      const verifyResult = await OTPModel.verifyOtp(normalizedEmail, otp.trim(), "INSTITUTION");
+
+      if (!verifyResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: verifyResult.message,
+        });
+      }
+
+      // Mark institution as verified with timestamp
+      const verifiedInst = await prisma.institution.update({
+        where: { id: institution.id },
+        data: {
+          isVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+      });
+
+      // Create welcome notification
       await prisma.notification.create({
         data: {
-          institutionId: institution.id,
+          institutionId: verifiedInst.id,
           title: "Welcome to SportRise Event Portal",
-          message: `Your institution profile for ${institution.name} has been successfully created. You can now publish your first sports or cultural event.`,
+          message: `Your institution profile for ${verifiedInst.name} has been verified successfully. You can now publish sports tournaments and submit official match scorecards.`,
           type: "success",
         },
       });
 
+      // Send Welcome confirmation email
+      await mailService.sendWelcomeEmail({
+        to: verifiedInst.email,
+        name: verifiedInst.name,
+        type: "INSTITUTION",
+      });
+
+      // Issue JWT Token
       const secret = process.env.JWT_SECRET || "sportrise_grassroots_sports_secret_token_key_2026";
       const token = jwt.sign(
-        { id: institution.id, email: institution.email, role: "institution" },
+        { id: verifiedInst.id, email: verifiedInst.email, role: "institution" },
         secret,
         { expiresIn: "7d" }
       );
 
-      return res.status(201).json({
+      const { password, ...safeData } = verifiedInst;
+
+      return res.status(200).json({
         success: true,
-        message: "Institution account successfully registered!",
+        message: "Institution email verified successfully! Welcome to SportRise.",
         token,
-        institution: {
-          id: institution.id,
-          name: institution.name,
-          type: institution.type,
-          logo: institution.logo,
-          email: institution.email,
-          contactNumber: institution.contactNumber,
-          website: institution.website,
-          address: institution.address,
-          city: institution.city,
-          state: institution.state,
-          country: institution.country,
-          pincode: institution.pincode,
-          authorizedPersonName: institution.authorizedPersonName,
-          authorizedPersonContact: institution.authorizedPersonContact,
-          description: institution.description,
-          coordinatorName: institution.coordinatorName,
-          coordinatorEmail: institution.coordinatorEmail,
-          coordinatorPhone: institution.coordinatorPhone,
-          isVerified: institution.isVerified,
-        },
+        institution: safeData,
       });
-    } catch (err) {
-      console.error("Institution Register Error:", err);
+    } catch (err: any) {
+      console.error("Institution Verify OTP Error:", err);
       return res.status(500).json({
         success: false,
-        message: "Failed to register institution. Please check your data.",
+        message: err.message || "Verification failed due to server error.",
       });
+    }
+  },
+
+  /**
+   * Resend Institution OTP Flow with Cooldown
+   */
+  async resendOtp(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Institution email is required." });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const institution = await prisma.institution.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (!institution) {
+        return res.status(404).json({ success: false, message: "No institution account found." });
+      }
+
+      try {
+        const { plainOtp } = await OTPModel.createOtp({
+          email: normalizedEmail,
+          institutionId: institution.id,
+          userType: "INSTITUTION",
+        });
+
+        await mailService.sendOtpEmail({
+          to: normalizedEmail,
+          name: institution.name,
+          otp: plainOtp,
+          type: "INSTITUTION",
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "A new 6-digit verification code has been dispatched to your institution email.",
+        });
+      } catch (cooldownErr: any) {
+        return res.status(429).json({
+          success: false,
+          message: cooldownErr.message,
+        });
+      }
+    } catch (err: any) {
+      console.error("Institution Resend OTP Error:", err);
+      return res.status(500).json({ success: false, message: "Failed to resend code." });
     }
   },
 
@@ -175,6 +328,34 @@ export const InstitutionController = {
         });
       }
 
+      // Check verification status
+      if (!institution.isVerified) {
+        try {
+          const { plainOtp } = await OTPModel.createOtp({
+            email: institution.email,
+            institutionId: institution.id,
+            userType: "INSTITUTION",
+          });
+
+          await mailService.sendOtpEmail({
+            to: institution.email,
+            name: institution.name,
+            otp: plainOtp,
+            type: "INSTITUTION",
+          });
+        } catch {
+          // Cooldown active, existing code is valid
+        }
+
+        return res.status(403).json({
+          success: false,
+          requiresVerification: true,
+          email: institution.email,
+          institutionName: institution.name,
+          message: "Your institution account requires email verification. A fresh 6-digit verification code has been sent to your email address.",
+        });
+      }
+
       const secret = process.env.JWT_SECRET || "sportrise_grassroots_sports_secret_token_key_2026";
       const token = jwt.sign(
         { id: institution.id, email: institution.email, role: "institution" },
@@ -182,30 +363,13 @@ export const InstitutionController = {
         { expiresIn: "7d" }
       );
 
+      const { password: pwd, ...safeData } = institution;
+
       return res.status(200).json({
         success: true,
         message: "Institution sign-in successful!",
         token,
-        institution: {
-          id: institution.id,
-          name: institution.name,
-          type: institution.type,
-          logo: institution.logo,
-          email: institution.email,
-          contactNumber: institution.contactNumber,
-          website: institution.website,
-          address: institution.address,
-          city: institution.city,
-          state: institution.state,
-          pincode: institution.pincode,
-          authorizedPersonName: institution.authorizedPersonName,
-          authorizedPersonContact: institution.authorizedPersonContact,
-          description: institution.description,
-          coordinatorName: institution.coordinatorName,
-          coordinatorEmail: institution.coordinatorEmail,
-          coordinatorPhone: institution.coordinatorPhone,
-          isVerified: institution.isVerified,
-        },
+        institution: safeData,
       });
     } catch (err) {
       console.error("Institution Login Error:", err);
@@ -233,16 +397,24 @@ export const InstitutionController = {
         return res.status(404).json({ success: false, message: "Institution not found." });
       }
 
-      // Omit password
       const { password, ...safeData } = inst;
-      return res.status(200).json({ success: true, institution: safeData });
+      return res.status(200).json({
+        success: true,
+        institution: {
+          ...safeData,
+          supportedSports: safeData.supportedSports ? JSON.parse(safeData.supportedSports || "[]") : [],
+          facilities: safeData.facilities ? JSON.parse(safeData.facilities || "{}") : {},
+          coaches: safeData.coaches ? JSON.parse(safeData.coaches || "[]") : [],
+          documents: safeData.documents ? JSON.parse(safeData.documents || "[]") : [],
+        },
+      });
     } catch (err) {
       return res.status(500).json({ success: false, message: "Failed to fetch profile." });
     }
   },
 
   /**
-   * Update Profile
+   * Update Institution Profile (Protected)
    */
   async updateProfile(req: AuthenticatedInstitutionRequest, res: Response) {
     try {
@@ -250,15 +422,67 @@ export const InstitutionController = {
         return res.status(401).json({ success: false, message: "Unauthorized." });
       }
 
-      const updateData = { ...req.body };
-      delete updateData.password; // Do not allow direct password override here
-      delete updateData.id;
+      const {
+        name,
+        type,
+        logo,
+        contactNumber,
+        website,
+        address,
+        city,
+        state,
+        pincode,
+        authorizedPersonName,
+        authorizedPersonContact,
+        description,
+        coordinatorName,
+        coordinatorEmail,
+        coordinatorPhone,
+        latitude,
+        longitude,
+        supportedSports,
+        facilities,
+        coaches,
+        documents,
+      } = req.body;
 
-      if (updateData.latitude !== undefined) {
-        updateData.latitude = updateData.latitude ? parseFloat(updateData.latitude) : null;
+      // Safe update data — forbidden to tamper with id, email, password, isVerified, emailVerifiedAt
+      const updateData: any = {};
+
+      if (name) updateData.name = name.trim();
+      if (type) updateData.type = type;
+      if (logo !== undefined) updateData.logo = logo;
+      if (contactNumber) updateData.contactNumber = contactNumber.trim();
+      if (website !== undefined) updateData.website = website?.trim() || null;
+      if (address) updateData.address = address.trim();
+      if (city) updateData.city = city.trim();
+      if (state) updateData.state = state.trim();
+      if (pincode) updateData.pincode = pincode.trim();
+      if (authorizedPersonName) updateData.authorizedPersonName = authorizedPersonName.trim();
+      if (authorizedPersonContact) updateData.authorizedPersonContact = authorizedPersonContact.trim();
+      if (description !== undefined) updateData.description = description?.trim() || null;
+      if (coordinatorName) updateData.coordinatorName = coordinatorName.trim();
+      if (coordinatorEmail) updateData.coordinatorEmail = coordinatorEmail.trim().toLowerCase();
+      if (coordinatorPhone) updateData.coordinatorPhone = coordinatorPhone.trim();
+
+      if (latitude !== undefined) {
+        updateData.latitude = latitude ? parseFloat(latitude) : null;
       }
-      if (updateData.longitude !== undefined) {
-        updateData.longitude = updateData.longitude ? parseFloat(updateData.longitude) : null;
+      if (longitude !== undefined) {
+        updateData.longitude = longitude ? parseFloat(longitude) : null;
+      }
+
+      if (supportedSports !== undefined) {
+        updateData.supportedSports = typeof supportedSports === "string" ? supportedSports : JSON.stringify(supportedSports);
+      }
+      if (facilities !== undefined) {
+        updateData.facilities = typeof facilities === "string" ? facilities : JSON.stringify(facilities);
+      }
+      if (coaches !== undefined) {
+        updateData.coaches = typeof coaches === "string" ? coaches : JSON.stringify(coaches);
+      }
+      if (documents !== undefined) {
+        updateData.documents = typeof documents === "string" ? documents : JSON.stringify(documents);
       }
 
       const updated = await prisma.institution.update({
@@ -270,10 +494,17 @@ export const InstitutionController = {
       return res.status(200).json({
         success: true,
         message: "Institution profile updated successfully!",
-        institution: safeData,
+        institution: {
+          ...safeData,
+          supportedSports: safeData.supportedSports ? JSON.parse(safeData.supportedSports || "[]") : [],
+          facilities: safeData.facilities ? JSON.parse(safeData.facilities || "{}") : {},
+          coaches: safeData.coaches ? JSON.parse(safeData.coaches || "[]") : [],
+          documents: safeData.documents ? JSON.parse(safeData.documents || "[]") : [],
+        },
       });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: "Failed to update profile." });
+    } catch (err: any) {
+      console.error("Update Institution Profile Error:", err);
+      return res.status(500).json({ success: false, message: err.message || "Failed to update profile." });
     }
   },
 
@@ -299,6 +530,9 @@ export const InstitutionController = {
         pendingApplications,
         recentApplications,
         recentEvents,
+        totalMatches,
+        verifiedMatches,
+        pendingMatches,
       ] = await Promise.all([
         prisma.event.count({ where: { institutionId } }),
         prisma.event.count({
@@ -340,6 +574,11 @@ export const InstitutionController = {
             },
           },
         }),
+        prisma.match.count({ where: { instituteId: institutionId } }),
+        prisma.match.count({ where: { instituteId: institutionId, status: "VERIFIED" } }),
+        prisma.match.count({
+          where: { instituteId: institutionId, status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+        }),
       ]);
 
       return res.status(200).json({
@@ -352,6 +591,9 @@ export const InstitutionController = {
           draftEvents,
           totalRegistrations,
           pendingApplications,
+          totalMatches,
+          verifiedMatches,
+          pendingMatches,
         },
         recentApplications,
         recentEvents,

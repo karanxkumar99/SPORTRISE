@@ -3,7 +3,7 @@ import { prisma } from "../prisma";
 
 export const RankingController = {
   /**
-   * Dedicated Olympic sport leaderboard with cascading filters
+   * Dedicated sport leaderboard with cascading filters & provisional badge support
    */
   async getLeaderboard(req: Request, res: Response) {
     try {
@@ -13,6 +13,7 @@ export const RankingController = {
         district,
         ageCategory,
         gender,
+        provisional, // "all" | "confirmed_only" | "provisional_only"
         page = "1",
         limit = "50",
       } = req.query;
@@ -22,7 +23,6 @@ export const RankingController = {
       const skip = (pageNum - 1) * pageSize;
 
       // Construct Prisma query filter
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: any = {
         isVerified: true,
       };
@@ -47,10 +47,20 @@ export const RankingController = {
         where.gender = { equals: gender as string };
       }
 
+      if (provisional === "confirmed_only") {
+        where.isProvisional = false;
+      } else if (provisional === "provisional_only") {
+        where.isProvisional = true;
+      }
+
       const [athletes, totalCount] = await Promise.all([
         prisma.user.findMany({
           where,
-          orderBy: { skillIndex: "desc" },
+          orderBy: [
+            { isProvisional: "asc" }, // Confirmed ranked athletes top
+            { verifiedPerformanceScore: "desc" },
+            { skillIndex: "desc" },
+          ],
           skip,
           take: pageSize,
           select: {
@@ -58,11 +68,16 @@ export const RankingController = {
             athleteId: true,
             fullName: true,
             sport: true,
+            position: true,
+            avatarUrl: true,
             state: true,
             district: true,
             ageCategory: true,
             gender: true,
             skillIndex: true,
+            verifiedPerformanceScore: true,
+            isProvisional: true,
+            verifiedMatchesCount: true,
             nationalRank: true,
             stateRank: true,
             districtRank: true,
@@ -78,16 +93,17 @@ export const RankingController = {
         return {
           ...athlete,
           contextualRank,
-          badge:
-            contextualRank === 1
-              ? "Gold"
-              : contextualRank === 2
-              ? "Silver"
-              : contextualRank === 3
-              ? "Bronze"
-              : contextualRank <= 10
-              ? "Top10"
-              : "Standard",
+          badge: athlete.isProvisional
+            ? "Provisional"
+            : contextualRank === 1
+            ? "Gold"
+            : contextualRank === 2
+            ? "Silver"
+            : contextualRank === 3
+            ? "Bronze"
+            : contextualRank <= 10
+            ? "Top10"
+            : "Standard",
         };
       });
 
@@ -97,9 +113,17 @@ export const RankingController = {
           sport: sport !== "All" ? (sport as string) : undefined,
           isVerified: true,
         },
-        _avg: { skillIndex: true },
-        _max: { skillIndex: true },
+        _avg: { verifiedPerformanceScore: true, skillIndex: true },
+        _max: { verifiedPerformanceScore: true },
         _count: { id: true },
+      });
+
+      const confirmedAthletesCount = await prisma.user.count({
+        where: {
+          sport: sport !== "All" ? (sport as string) : undefined,
+          isVerified: true,
+          isProvisional: false,
+        },
       });
 
       return res.status(200).json({
@@ -114,8 +138,9 @@ export const RankingController = {
         summary: {
           sport,
           totalAthletes: statsAggregate._count.id || 0,
-          averageSkillIndex: Math.round(statsAggregate._avg.skillIndex || 500),
-          topSkillIndex: statsAggregate._max.skillIndex || 500,
+          confirmedRankedAthletes: confirmedAthletesCount,
+          averageScore: Math.round((statsAggregate._avg.verifiedPerformanceScore || 50) * 10) / 10,
+          topScore: statsAggregate._max.verifiedPerformanceScore || 0,
         },
       });
     } catch (err) {
@@ -131,7 +156,6 @@ export const RankingController = {
     try {
       const { sport } = req.query;
 
-      // Group athletes by state
       const stateAthletes = await prisma.user.groupBy({
         by: ["state"],
         where: {
@@ -139,9 +163,9 @@ export const RankingController = {
           sport: sport && sport !== "All" ? (sport as string) : undefined,
         },
         _count: { id: true },
-        _avg: { skillIndex: true },
+        _avg: { verifiedPerformanceScore: true },
         orderBy: {
-          _avg: { skillIndex: "desc" },
+          _avg: { verifiedPerformanceScore: "desc" },
         },
         take: 10,
       });
@@ -152,7 +176,7 @@ export const RankingController = {
           rank: idx + 1,
           state: s.state,
           athleteCount: s._count.id,
-          avgSkillIndex: Math.round(s._avg.skillIndex || 0),
+          avgScore: Math.round((s._avg.verifiedPerformanceScore || 0) * 10) / 10,
         })),
       });
     } catch (err) {

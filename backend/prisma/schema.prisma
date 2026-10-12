@@ -10,39 +10,59 @@ datasource db {
 }
 
 model User {
-  id                 String              @id @default(uuid())
-  athleteId          String              @unique
-  fullName           String
-  mobile             String
-  email              String              @unique
-  password           String
-  state              String
-  district           String
-  sport              String
-  ageCategory        String              @default("U-19")
-  gender             String              @default("Male")
-  isVerified         Boolean             @default(false)
-  skillIndex         Int                 @default(500)
-  nationalRank       Int?
-  stateRank          Int?
-  districtRank       Int?
-  bio                String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  performanceRecords PerformanceRecord[]
-  otps               OTP[]
-  applications       Application[]
+  id                      String              @id @default(uuid())
+  athleteId               String              @unique
+  fullName                String
+  mobile                  String
+  email                   String              @unique
+  password                String
+  state                   String
+  district                String
+  sport                   String
+  ageCategory             String              @default("U-19")
+  gender                  String              @default("Male")
+  isVerified              Boolean             @default(false)
+  emailVerifiedAt         DateTime?
+  skillIndex              Int                 @default(500)
+  verifiedPerformanceScore Float              @default(0.0) // Deterministic 0-100 score from verified matches
+  isProvisional           Boolean             @default(true) // true until minimum verified matches threshold met
+  verifiedMatchesCount    Int                 @default(0)
+  nationalRank            Int?
+  stateRank               Int?
+  districtRank            Int?
+  bio                     String?
+  avatarUrl               String?
+  dob                     DateTime?
+  experienceYears         Int?
+  achievements            String?             // JSON array or text
+  position                String?             // Playing position/role
+  lastAiReport            String?             // JSON: AI verified match performance insights
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  performanceRecords      PerformanceRecord[]
+  otps                    OTP[]
+  applications            Application[]
+  matchParticipations     MatchParticipant[]
+  rankingHistories        RankingHistory[]
+  disputes                Dispute[]
 }
 
 model OTP {
-  id        String   @id @default(uuid())
-  email     String
-  otp       String
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
+  id            String       @id @default(uuid())
+  email         String
+  otp           String       // Clear code (or placeholder when hashed)
+  hashedOtp     String?      // SHA-256 hashed OTP for production security
+  attempts      Int          @default(0)
+  maxAttempts   Int          @default(5)
+  lastSentAt    DateTime     @default(now())
+  expiresAt     DateTime
+  used          Boolean      @default(false)
+  userType      String       @default("ATHLETE") // "ATHLETE" or "INSTITUTION"
+  createdAt     DateTime     @default(now())
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 }
 
 model PerformanceRecord {
@@ -82,10 +102,17 @@ model Institution {
   latitude                Float?
   longitude               Float?
   isVerified              Boolean        @default(false)
+  emailVerifiedAt         DateTime?
+  supportedSports         String?        // JSON array of sports offered
+  facilities              String?        // JSON description of infrastructure
+  coaches                 String?        // JSON array of coach profiles
+  documents               String?        // JSON array of verified institute documents
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
   events                  Event[]
   notifications           Notification[]
+  matchesSubmitted        Match[]
+  otps                    OTP[]
 }
 
 model Event {
@@ -93,7 +120,7 @@ model Event {
   institutionId          String
   institution            Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   name                   String
-  category               String         // Sports Tournament, Athletics, Football, Cricket, Basketball, Volleyball, Badminton, Chess, Esports, Debate, Quiz, Cultural Event, Academic Competition, Other
+  category               String         // Sports Tournament, Athletics, Football, Cricket, etc.
   sportGame              String
   bannerImage            String?
   shortDescription       String
@@ -117,7 +144,7 @@ model Event {
   latitude               Float?
   longitude              Float?
   rounds                 String?        // JSON array of rounds/matches
-  allowedInstitutionsType String        @default("any") // only_ours, selected, any, external_allowed, invite_only
+  allowedInstitutionsType String        @default("any")
   selectedInstitutions   String?        // JSON string
   minAge                 Int?
   maxAge                 Int?
@@ -130,20 +157,123 @@ model Event {
   teamMinSize            Int?
   teamMaxSize            Int?
   customEligibility      String?
-  gameFormat             String?        // JSON string storing format, match style, prizes, certificates, etc.
-  rules                  String?        // JSON string storing categorized rules
-  documents              String?        // JSON string array of documents
+  gameFormat             String?        // JSON string
+  rules                  String?        // JSON string
+  documents              String?        // JSON string array
   isPaid                 Boolean        @default(false)
   registrationFee        Float          @default(0)
   gstPercent             Float          @default(0)
   paymentDeadline        DateTime?
   refundPolicy           String?
-  visibility             String         @default("Public") // Public, InstitutionOnly, ExternalAllowed, Private
-  status                 String         @default("Published") // Draft, Published, Scheduled, Cancelled
+  visibility             String         @default("Public")
+  status                 String         @default("Published")
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   applications           Application[]
   bookmarks              Bookmark[]
+  matches                Match[]
+}
+
+model Match {
+  id                  String             @id @default(uuid())
+  matchNumber         String             @unique // e.g. SR-M-2026-0001
+  sport               String
+  competitionName     String
+  eventId             String?
+  event               Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  instituteId         String
+  institution         Institution        @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  opponentName        String?
+  venue               String
+  matchDate           DateTime
+  matchFormat         String             // T20, 90-min, 3-sets, Sprint 100m, etc.
+  rulesSummary        String?
+  finalScore          String             // e.g. "3 - 1" or "182/4 vs 178/9"
+  winner              String?            // Name of winning team/athlete
+  resultSummary       String?            // e.g. "Won by 2 wickets" or "Won in straight sets"
+  status              String             @default("SUBMITTED") // DRAFT, SUBMITTED, UNDER_REVIEW, CHANGES_REQUESTED, VERIFIED, REJECTED, DISPUTED
+  rejectionReason     String?
+  changeRequestNotes  String?
+  reviewedBy          String?            // Reviewer/Admin identifier
+  reviewedAt          DateTime?
+  isCompleted         Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  participants        MatchParticipant[]
+  evidences           MatchEvidence[]
+  disputes            Dispute[]
+}
+
+model MatchParticipant {
+  id                  String   @id @default(uuid())
+  matchId             String
+  match               Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  athleteId           String
+  athlete             User     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  teamName            String?
+  role                String?  // Captain, Batsman, Forward, Goalkeeper, etc.
+  individualStats     String   // JSON string of sport-specific statistics
+  performanceRating   Float?   // Match specific performance rating (0-100)
+  verifiedStatsSaved  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+}
+
+model MatchEvidence {
+  id               String   @id @default(uuid())
+  matchId          String
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  fileUrl          String
+  fileName         String
+  fileType         String   // MIME type
+  fileSize         Int      // In bytes
+  category         String   // scorecard, scoreboard, video, certificate, id_proof, other
+  uploaderId       String
+  uploaderType     String   @default("INSTITUTION") // INSTITUTION, ATHLETE, ADMIN
+  verificationFlag String   @default("PENDING")     // PENDING, VALID, SUSPICIOUS
+  notes            String?
+  createdAt        DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  entityType String   // MATCH, USER, INSTITUTION, RANKING, DISPUTE
+  entityId   String
+  action     String   // SUBMITTED, REVIEWED, VERIFIED, REJECTED, DISPUTED, UPDATED, CREATED
+  actorId    String
+  actorRole  String   // ADMIN, INSTITUTION, ATHLETE, SYSTEM
+  details    String?  // JSON string
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+}
+
+model RankingHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport           String
+  score           Float    // Deterministic 0-100 score
+  nationalRank    Int?
+  stateRank       Int?
+  districtRank    Int?
+  isProvisional   Boolean  @default(true)
+  modelVersion    String   @default("v2.0-verified-hybrid")
+  triggerMatchId  String?  // Match that triggered this recalculation
+  calculatedAt    DateTime @default(now())
+}
+
+model Dispute {
+  id                   String       @id @default(uuid())
+  matchId              String
+  match                Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  raisedByUserId       String?
+  raisedByUser         User?        @relation(fields: [raisedByUserId], references: [id])
+  raisedByInstituteId  String?
+  reason               String
+  evidenceUrl          String?
+  status               String       @default("OPEN") // OPEN, RESOLVED, DISMISSED
+  resolutionNotes      String?
+  resolvedAt           DateTime?
+  createdAt            DateTime     @default(now())
 }
 
 model Application {
@@ -173,8 +303,8 @@ model Application {
   isTeam              Boolean  @default(false)
   teamName            String?
   captainName         String?
-  teamMembers         String?  // JSON array of player names & roles
-  status              String   @default("Submitted") // Submitted, Under Review, Approved, Rejected, Waitlisted, Cancelled
+  teamMembers         String?  // JSON array
+  status              String   @default("Submitted")
   organizerNotes      String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -188,7 +318,7 @@ model Notification {
   title         String
   message       String
   link          String?
-  type          String       @default("info") // info, success, warning, alert
+  type          String       @default("info")
   isRead        Boolean      @default(false)
   createdAt     DateTime     @default(now())
 }

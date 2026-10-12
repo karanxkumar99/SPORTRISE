@@ -30,8 +30,8 @@ export const Navbar: React.FC = () => {
     { href: "/", label: "Home", icon: Flame },
     { href: "/sports-corner", label: "Sports Corner", icon: BookOpen },
     { href: "/events", label: "Events", icon: Calendar, badge: "New" },
+    { href: "/matches", label: "Matches", icon: ShieldCheck },
     { href: "/leaderboard", label: "Rankings", icon: Trophy },
-    { href: "/performance-log", label: "AI Assessment", icon: BarChart3 },
     ...(user ? [{ href: "/dashboard", label: "Dashboard", icon: User }] : []),
   ];
 

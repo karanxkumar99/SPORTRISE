@@ -459,6 +459,7 @@ export default function CreateEventPage() {
                   </label>
                   <input
                     type="tel"
+                    placeholder="+91 XXXXXXXXXX"
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"

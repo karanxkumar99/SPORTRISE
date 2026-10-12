@@ -60,7 +60,7 @@ export const AuthController = {
       if (!MOBILE_REGEX.test(cleanedMobile)) {
         return res.status(400).json({
           success: false,
-          message: "Please enter a valid 10-digit Indian mobile number (e.g., +91 9876543210 or 9876543210).",
+          message: "Please enter a valid 10-digit Indian mobile number (e.g., +91 XXXXXXXXXX or XXXXXXXXXX).",
         });
       }
 
@@ -69,21 +69,34 @@ export const AuthController = {
       const existingUser = await UserModel.findByEmail(normalizedEmail);
       if (existingUser) {
         if (!existingUser.isVerified) {
-          // Send fresh OTP for pending verification
-          const otpRecord = await OTPModel.createOtp(normalizedEmail, existingUser.id);
-          await mailService.sendOtpEmail({
-            to: normalizedEmail,
-            name: existingUser.fullName,
-            otp: otpRecord.otp,
-          });
+          try {
+            // Send fresh OTP for pending verification
+            const { plainOtp } = await OTPModel.createOtp({
+              email: normalizedEmail,
+              userId: existingUser.id,
+              userType: "ATHLETE",
+            });
 
-          return res.status(200).json({
-            success: true,
-            isExistingUnverified: true,
-            athleteId: existingUser.athleteId,
-            email: normalizedEmail,
-            message: "An unverified account exists. A fresh 6-digit verification code has been dispatched to your email address.",
-          });
+            await mailService.sendOtpEmail({
+              to: normalizedEmail,
+              name: existingUser.fullName,
+              otp: plainOtp,
+              type: "ATHLETE",
+            });
+
+            return res.status(200).json({
+              success: true,
+              isExistingUnverified: true,
+              athleteId: existingUser.athleteId,
+              email: normalizedEmail,
+              message: "An unverified account exists. A fresh 6-digit verification code has been dispatched to your email address.",
+            });
+          } catch (cooldownErr: any) {
+            return res.status(429).json({
+              success: false,
+              message: cooldownErr.message,
+            });
+          }
         }
 
         return res.status(409).json({
@@ -110,13 +123,18 @@ export const AuthController = {
       });
 
       // Generate 6-digit OTP
-      const otpRecord = await OTPModel.createOtp(normalizedEmail, newUser.id);
+      const { plainOtp } = await OTPModel.createOtp({
+        email: normalizedEmail,
+        userId: newUser.id,
+        userType: "ATHLETE",
+      });
 
       // Dispatch branded email
       await mailService.sendOtpEmail({
         to: normalizedEmail,
         name: newUser.fullName,
-        otp: otpRecord.otp,
+        otp: plainOtp,
+        type: "ATHLETE",
       });
 
       // Recalculate sport rankings
@@ -128,11 +146,11 @@ export const AuthController = {
         athleteId: newUser.athleteId,
         email: newUser.email,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Register Error:", err);
       return res.status(500).json({
         success: false,
-        message: "Registration failed due to server error. Please try again.",
+        message: err.message || "Registration failed due to server error. Please try again.",
       });
     }
   },
@@ -161,17 +179,23 @@ export const AuthController = {
         });
       }
 
-      const validOtp = await OTPModel.verifyOtp(normalizedEmail, otp.trim());
+      const verifyResult = await OTPModel.verifyOtp(normalizedEmail, otp.trim(), "ATHLETE");
 
-      if (!validOtp) {
+      if (!verifyResult.success) {
         return res.status(400).json({
           success: false,
-          message: "Invalid or expired OTP. Please request a new code.",
+          message: verifyResult.message,
         });
       }
 
-      // Mark athlete as verified
-      const verifiedUser = await UserModel.markVerified(user.id);
+      // Mark athlete as verified and record verification timestamp
+      const verifiedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          isVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+      });
 
       // Send Welcome confirmation email
       await mailService.sendWelcomeEmail({
@@ -179,6 +203,7 @@ export const AuthController = {
         name: verifiedUser.fullName,
         athleteId: verifiedUser.athleteId,
         sport: verifiedUser.sport,
+        type: "ATHLETE",
       });
 
       // Recalculate sport rankings
@@ -208,7 +233,13 @@ export const AuthController = {
           ageCategory: verifiedUser.ageCategory,
           gender: verifiedUser.gender,
           skillIndex: verifiedUser.skillIndex,
+          verifiedPerformanceScore: verifiedUser.verifiedPerformanceScore,
+          isProvisional: verifiedUser.isProvisional,
           isVerified: verifiedUser.isVerified,
+          avatarUrl: verifiedUser.avatarUrl,
+          position: verifiedUser.position,
+          experienceYears: verifiedUser.experienceYears,
+          achievements: verifiedUser.achievements,
         },
       });
     } catch (err) {
@@ -221,7 +252,7 @@ export const AuthController = {
   },
 
   /**
-   * Resend OTP Flow
+   * Resend OTP Flow with Cooldown
    */
   async resendOtp(req: Request, res: Response) {
     try {
@@ -237,17 +268,30 @@ export const AuthController = {
         return res.status(404).json({ success: false, message: "No athlete account found." });
       }
 
-      const otpRecord = await OTPModel.createOtp(normalizedEmail, user.id);
-      await mailService.sendOtpEmail({
-        to: normalizedEmail,
-        name: user.fullName,
-        otp: otpRecord.otp,
-      });
+      try {
+        const { plainOtp } = await OTPModel.createOtp({
+          email: normalizedEmail,
+          userId: user.id,
+          userType: "ATHLETE",
+        });
 
-      return res.status(200).json({
-        success: true,
-        message: "A new 6-digit verification code has been dispatched to your email address.",
-      });
+        await mailService.sendOtpEmail({
+          to: normalizedEmail,
+          name: user.fullName,
+          otp: plainOtp,
+          type: "ATHLETE",
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "A new 6-digit verification code has been dispatched to your email address.",
+        });
+      } catch (cooldownErr: any) {
+        return res.status(429).json({
+          success: false,
+          message: cooldownErr.message,
+        });
+      }
     } catch (err) {
       console.error("Resend OTP Error:", err);
       return res.status(500).json({ success: false, message: "Failed to resend code." });
@@ -294,13 +338,23 @@ export const AuthController = {
       }
 
       if (!user.isVerified) {
-        // Send OTP so user can finish verification
-        const otpRecord = await OTPModel.createOtp(user.email, user.id);
-        await mailService.sendOtpEmail({
-          to: user.email,
-          name: user.fullName,
-          otp: otpRecord.otp,
-        });
+        try {
+          // Send fresh OTP so user can finish verification
+          const { plainOtp } = await OTPModel.createOtp({
+            email: user.email,
+            userId: user.id,
+            userType: "ATHLETE",
+          });
+
+          await mailService.sendOtpEmail({
+            to: user.email,
+            name: user.fullName,
+            otp: plainOtp,
+            type: "ATHLETE",
+          });
+        } catch {
+          // Cooldown active, existing OTP is still within 60s window
+        }
 
         return res.status(403).json({
           success: false,
@@ -335,10 +389,17 @@ export const AuthController = {
           ageCategory: user.ageCategory,
           gender: user.gender,
           skillIndex: user.skillIndex,
+          verifiedPerformanceScore: user.verifiedPerformanceScore,
+          isProvisional: user.isProvisional,
+          verifiedMatchesCount: user.verifiedMatchesCount,
           nationalRank: user.nationalRank,
           stateRank: user.stateRank,
           districtRank: user.districtRank,
           bio: user.bio,
+          avatarUrl: user.avatarUrl,
+          position: user.position,
+          experienceYears: user.experienceYears,
+          achievements: user.achievements,
           isVerified: user.isVerified,
         },
       });
@@ -349,7 +410,7 @@ export const AuthController = {
   },
 
   /**
-   * Get Logged-in Athlete Profile & Rankings
+   * Get Logged-in Athlete Profile & Rankings & Verified Match History
    */
   async getProfile(req: AuthenticatedRequest, res: Response) {
     try {
@@ -360,6 +421,23 @@ export const AuthController = {
       const athlete = await prisma.user.findUnique({
         where: { id: req.user.id },
         include: {
+          matchParticipations: {
+            include: {
+              match: {
+                include: {
+                  institution: {
+                    select: { name: true, city: true, state: true },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 15,
+          },
+          rankingHistories: {
+            orderBy: { calculatedAt: "desc" },
+            take: 10,
+          },
           performanceRecords: {
             orderBy: { recordedAt: "desc" },
             take: 10,
@@ -378,15 +456,6 @@ export const AuthController = {
         where: { sport: athlete.sport, state: athlete.state, district: athlete.district },
       });
 
-      // Parse records safely
-      const parsedRecords = athlete.performanceRecords.map((r) => ({
-        ...r,
-        metrics: JSON.parse(r.metrics || "{}"),
-        aiStrengths: JSON.parse(r.aiStrengths || "[]"),
-        aiImprovements: JSON.parse(r.aiImprovements || "[]"),
-        aiRecommendations: JSON.parse(r.aiRecommendations || "[]"),
-      }));
-
       return res.status(200).json({
         success: true,
         user: {
@@ -401,11 +470,20 @@ export const AuthController = {
           ageCategory: athlete.ageCategory,
           gender: athlete.gender,
           skillIndex: athlete.skillIndex,
+          verifiedPerformanceScore: athlete.verifiedPerformanceScore,
+          isProvisional: athlete.isProvisional,
+          verifiedMatchesCount: athlete.verifiedMatchesCount,
           nationalRank: athlete.nationalRank || 1,
           stateRank: athlete.stateRank || 1,
           districtRank: athlete.districtRank || 1,
           bio: athlete.bio,
+          avatarUrl: athlete.avatarUrl,
+          position: athlete.position,
+          experienceYears: athlete.experienceYears,
+          achievements: athlete.achievements ? JSON.parse(athlete.achievements || "[]") : [],
+          lastAiReport: athlete.lastAiReport ? JSON.parse(athlete.lastAiReport || "{}") : null,
           isVerified: athlete.isVerified,
+          emailVerifiedAt: athlete.emailVerifiedAt,
           createdAt: athlete.createdAt,
         },
         stats: {
@@ -413,11 +491,90 @@ export const AuthController = {
           totalStateInSport,
           totalDistrictInSport,
         },
-        performanceHistory: parsedRecords,
+        verifiedMatches: athlete.matchParticipations.map((p) => ({
+          id: p.id,
+          matchId: p.matchId,
+          matchNumber: p.match.matchNumber,
+          competitionName: p.match.competitionName,
+          sport: p.match.sport,
+          matchDate: p.match.matchDate,
+          venue: p.match.venue,
+          finalScore: p.match.finalScore,
+          winner: p.match.winner,
+          status: p.match.status,
+          role: p.role,
+          teamName: p.teamName,
+          individualStats: JSON.parse(p.individualStats || "{}"),
+          performanceRating: p.performanceRating,
+          institutionName: p.match.institution.name,
+        })),
+        rankingHistory: athlete.rankingHistories,
       });
     } catch (err) {
       console.error("Get Profile Error:", err);
       return res.status(500).json({ success: false, message: "Failed to fetch profile." });
+    }
+  },
+
+  /**
+   * Update Athlete Profile (Protected)
+   */
+  async updateProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: "Unauthorized." });
+      }
+
+      const { fullName, bio, avatarUrl, position, dob, experienceYears, achievements, mobile, state, district } = req.body;
+
+      // Safe update data — forbidden to tamper with roles, verification, athleteId, or official ranks
+      const updateData: any = {};
+
+      if (fullName && typeof fullName === "string") updateData.fullName = fullName.trim();
+      if (bio !== undefined) updateData.bio = bio;
+      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+      if (position !== undefined) updateData.position = position;
+      if (dob) updateData.dob = new Date(dob);
+      if (experienceYears !== undefined) updateData.experienceYears = parseInt(experienceYears, 10) || 0;
+      if (achievements !== undefined) {
+        updateData.achievements = typeof achievements === "string" ? achievements : JSON.stringify(achievements);
+      }
+      if (mobile && MOBILE_REGEX.test(mobile.replace(/[\s-]/g, ""))) {
+        updateData.mobile = mobile.replace(/[\s-]/g, "");
+      }
+      if (state) updateData.state = state;
+      if (district) updateData.district = district;
+
+      const updated = await prisma.user.update({
+        where: { id: req.user.id },
+        data: updateData,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Athlete profile updated successfully!",
+        user: {
+          id: updated.id,
+          athleteId: updated.athleteId,
+          fullName: updated.fullName,
+          email: updated.email,
+          mobile: updated.mobile,
+          state: updated.state,
+          district: updated.district,
+          sport: updated.sport,
+          ageCategory: updated.ageCategory,
+          gender: updated.gender,
+          bio: updated.bio,
+          avatarUrl: updated.avatarUrl,
+          position: updated.position,
+          experienceYears: updated.experienceYears,
+          achievements: updated.achievements ? JSON.parse(updated.achievements || "[]") : [],
+          isVerified: updated.isVerified,
+        },
+      });
+    } catch (err: any) {
+      console.error("Update Profile Error:", err);
+      return res.status(500).json({ success: false, message: err.message || "Failed to update profile." });
     }
   },
 };

@@ -8,6 +8,8 @@ import eventRoutes from "./event.routes";
 import applicationRoutes from "./application.routes";
 import adminRoutes from "./admin.routes";
 import notificationRoutes from "./notification.routes";
+import matchRoutes from "./match.routes";
+import uploadRoutes from "./upload.routes";
 
 const apiRouter = Router();
 
@@ -20,13 +22,21 @@ apiRouter.use("/events", eventRoutes);
 apiRouter.use("/applications", applicationRoutes);
 apiRouter.use("/admin", adminRoutes);
 apiRouter.use("/notifications", notificationRoutes);
+apiRouter.use("/matches", matchRoutes);
+apiRouter.use("/upload", uploadRoutes);
 
 apiRouter.get("/health", (req, res) => {
   res.json({
     status: "healthy",
     project: "SPORTRISE (खेल उत्थान)",
-    version: "2.0.0",
-    modules: ["Athlete Portal", "Olympic Rules Corner", "AI Engine", "School/College Event Management"],
+    version: "2.1.0",
+    modules: [
+      "Athlete Portal",
+      "School & College Event Management",
+      "Verified Match & Evidence Submission Engine",
+      "Anti-Cheating & Audit System",
+      "Deterministic 0-100 & AI Ranking Engine",
+    ],
     timestamp: new Date().toISOString(),
   });
 });

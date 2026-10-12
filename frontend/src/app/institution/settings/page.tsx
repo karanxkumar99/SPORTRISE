@@ -99,6 +99,48 @@ export default function InstitutionSettingsPage() {
             </div>
           </div>
 
+          {/* Email Verification Status */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Email Verification Status
+            </h2>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">{institution?.email}</span>
+                  {institution?.isVerified ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                      <AlertCircle className="w-3 h-3" />
+                      Unverified
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">
+                  {institution?.isVerified
+                    ? "Your institution email is verified and authorized to host official events and publish match scorecards."
+                    : "Complete 6-digit email OTP verification to enable official event management and match submissions."}
+                </p>
+              </div>
+
+              {!institution?.isVerified && (
+                <Link
+                  href={`/institution/verify-otp?email=${encodeURIComponent(institution?.email || "")}`}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+                >
+                  Verify Email Now
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </div>
+          </div>
+
           {/* Account Security */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">

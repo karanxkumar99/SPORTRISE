@@ -191,7 +191,7 @@ export default function RegisterPage() {
                 </label>
                 <input
                   type="tel"
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 XXXXXXXXXX"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   className={`w-full bg-slate-950 border ${

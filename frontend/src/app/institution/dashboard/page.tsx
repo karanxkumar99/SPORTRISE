@@ -97,17 +97,26 @@ export default function InstitutionDashboardPage() {
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl">
         {/* Top Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl backdrop-blur">
+        {/* Top Header Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl backdrop-blur">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-black text-white">
                 {institution.name}
               </h1>
-              {institution.isVerified && (
-                <span className="flex items-center gap-1 bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-full text-xs font-bold">
+              {institution.isVerified ? (
+                <span className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-xs font-bold">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Verified Institution
                 </span>
+              ) : (
+                <Link
+                  href={`/institution/verify-otp?email=${encodeURIComponent(institution.email)}`}
+                  className="flex items-center gap-1 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Email Unverified • Click to Verify
+                </Link>
               )}
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -133,6 +142,30 @@ export default function InstitutionDashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Unverified Institution Warning Banner */}
+        {!institution.isVerified && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl flex-shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Email Verification Pending for {institution.name}</h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Your registered email ({institution.email}) requires OTP confirmation to unlock publishing official tournaments, verifying matches, and issuing athlete awards.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/institution/verify-otp?email=${encodeURIComponent(institution.email)}`}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto flex-shrink-0"
+            >
+              Verify Email Now
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
