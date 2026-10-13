@@ -49,7 +49,7 @@ class MailService {
         this.transporter = nodemailer.createTransport({
           host,
           port,
-          secure: port === 465,
+          secure: false,
           auth: { user, pass },
           connectionTimeout: 8000,
           socketTimeout: 8000,
