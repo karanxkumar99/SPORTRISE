@@ -25,7 +25,7 @@ function InstitutionVerifyOtpContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(15);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ function InstitutionVerifyOtpContent() {
       const res = await api.post("/institutions/resend-otp", { email });
       if (res.data?.success) {
         setInfoMessage("A fresh 6-digit code has been dispatched to your institution email.");
-        setResendCooldown(60);
+        setResendCooldown(15);
       } else {
         setError(res.data?.message || "Failed to resend code.");
       }

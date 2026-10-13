@@ -30,13 +30,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor for unified error extraction
+// Response interceptor for unified error extraction while preserving response metadata
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const message =
       error.response?.data?.message || error.message || "An unexpected error occurred.";
-    return Promise.reject(new Error(message));
+    const err = new Error(message);
+    (err as any).response = error.response;
+    (err as any).status = error.response?.status;
+    return Promise.reject(err);
   }
 );
 

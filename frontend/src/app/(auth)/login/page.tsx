@@ -46,8 +46,10 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       // Check if unverified
-      if (err.message?.includes("verification") || err.message?.includes("OTP")) {
-        router.push(`/verify-otp?email=${encodeURIComponent(identifier.trim())}`);
+      const respEmail = err.response?.data?.email;
+      const targetEmail = respEmail || (identifier.includes("@") ? identifier.trim().toLowerCase() : "");
+      if (err.response?.status === 403 || err.message?.includes("verification") || err.message?.includes("OTP")) {
+        router.push(`/verify-otp?email=${encodeURIComponent(targetEmail)}`);
         return;
       }
       setError(err.message || "Login failed.");

@@ -122,8 +122,8 @@ export default function RegisterPage() {
       } else {
         setError(res.data?.message || "Registration failed. Please try again.");
       }
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err.response?.data?.message || (err as Error).message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
