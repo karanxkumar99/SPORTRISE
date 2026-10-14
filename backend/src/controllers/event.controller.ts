@@ -376,7 +376,7 @@ export const EventController = {
             },
           },
           _count: {
-            select: { applications: true },
+            select: { applications: true, matches: true },
           },
         },
       });
@@ -396,6 +396,7 @@ export const EventController = {
           dynamicStatus,
           isRegClosed,
           applicationsCount: evt._count.applications,
+          matchesCount: evt._count.matches || 0,
           rounds: evt.rounds ? JSON.parse(evt.rounds) : [],
           documents: evt.documents ? JSON.parse(evt.documents) : [],
         };
@@ -440,6 +441,31 @@ export const EventController = {
               isVerified: true,
             },
           },
+          matches: {
+            include: {
+              participants: {
+                include: {
+                  athlete: {
+                    select: {
+                      id: true,
+                      athleteId: true,
+                      fullName: true,
+                      sport: true,
+                      avatarUrl: true,
+                      state: true,
+                      district: true,
+                      ageCategory: true,
+                      gender: true,
+                    },
+                  },
+                },
+              },
+              evidences: true,
+            },
+            orderBy: {
+              matchDate: "desc",
+            },
+          },
           _count: {
             select: { applications: true },
           },
@@ -459,6 +485,25 @@ export const EventController = {
 
       const isRegClosed = event.regEndDate < now;
 
+      const formattedMatches = (event.matches || []).map((m: any) => ({
+        ...m,
+        refereeDetails: m.refereeDetails ? (typeof m.refereeDetails === "string" && m.refereeDetails.startsWith("{") ? JSON.parse(m.refereeDetails) : m.refereeDetails) : null,
+        participants: (m.participants || []).map((p: any) => {
+          let parsedStats = p.individualStats;
+          if (typeof p.individualStats === "string") {
+            try {
+              parsedStats = JSON.parse(p.individualStats);
+            } catch {
+              parsedStats = p.individualStats;
+            }
+          }
+          return {
+            ...p,
+            individualStats: parsedStats,
+          };
+        }),
+      }));
+
       return res.status(200).json({
         success: true,
         event: {
@@ -466,6 +511,7 @@ export const EventController = {
           dynamicStatus,
           isRegClosed,
           applicationsCount: event._count.applications,
+          matches: formattedMatches,
           rounds: event.rounds ? JSON.parse(event.rounds) : [],
           rules: event.rules ? (event.rules.startsWith("{") || event.rules.startsWith("[") ? JSON.parse(event.rules) : event.rules) : null,
           gameFormat: event.gameFormat ? (event.gameFormat.startsWith("{") || event.gameFormat.startsWith("[") ? JSON.parse(event.gameFormat) : event.gameFormat) : null,

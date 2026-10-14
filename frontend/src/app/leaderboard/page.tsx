@@ -41,6 +41,7 @@ interface RankedAthlete {
   stateRank?: number;
   districtRank?: number;
   contextualRank: number;
+  recentPerformance?: string;
   badge: "Gold" | "Silver" | "Bronze" | "Top10" | "Standard" | "Provisional";
 }
 
@@ -336,24 +337,38 @@ function LeaderboardInner() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-950/80 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800">
+              <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="py-4 px-6">Rank</th>
-                  <th className="py-4 px-6">Athlete Name & ID</th>
-                  <th className="py-4 px-6">Location</th>
-                  <th className="py-4 px-6">Category</th>
-                  <th className="py-4 px-6">Calibration</th>
-                  <th className="py-4 px-6 text-right">Verified Score (0-100)</th>
+                  <th className="py-4 px-5">Rank</th>
+                  <th className="py-4 px-5">Athlete Name & ID</th>
+                  <th className="py-4 px-5">Sport & Discipline</th>
+                  <th className="py-4 px-5">Location</th>
+                  <th className="py-4 px-5">Fixtures & Calibration</th>
+                  <th className="py-4 px-5">Recent Match Performance</th>
+                  <th className="py-4 px-5 text-right">Verified Score (0-100)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {athletes.map((athlete) => (
                   <tr key={athlete.id} className="hover:bg-slate-850/60 transition-colors">
-                    <td className="py-4 px-6 font-bold">
-                      <span className="font-mono text-slate-300">#{athlete.contextualRank}</span>
+                    {/* Rank */}
+                    <td className="py-4 px-5 font-bold">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-mono text-sm ${
+                          athlete.contextualRank === 1 ? "text-amber-400 font-black" : athlete.contextualRank === 2 ? "text-slate-300 font-bold" : athlete.contextualRank === 3 ? "text-amber-600 font-bold" : "text-slate-400"
+                        }`}>
+                          #{athlete.contextualRank}
+                        </span>
+                        {athlete.nationalRank && (
+                          <span className="text-[9px] text-slate-500 font-mono">
+                            (Nat #{athlete.nationalRank})
+                          </span>
+                        )}
+                      </div>
                     </td>
 
-                    <td className="py-4 px-6">
+                    {/* Athlete Name & ID */}
+                    <td className="py-4 px-5">
                       <Link
                         href={`/athletes/${athlete.athleteId || athlete.id}`}
                         className="group block"
@@ -366,30 +381,53 @@ function LeaderboardInner() {
                       </Link>
                     </td>
 
-                    <td className="py-4 px-6">
-                      <div className="text-slate-200 font-medium">{athlete.district}</div>
-                      <div className="text-[11px] text-slate-400">{athlete.state}</div>
-                    </td>
-
-                    <td className="py-4 px-6">
-                      <span className="bg-slate-950 px-2 py-1 rounded text-xs border border-slate-800 text-slate-300">
-                        {athlete.ageCategory} &bull; {athlete.gender}
+                    {/* Sport & Position */}
+                    <td className="py-4 px-5">
+                      <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-950 text-slate-200 border border-slate-800">
+                        {athlete.sport}
                       </span>
-                    </td>
-
-                    <td className="py-4 px-6">
-                      {athlete.isProvisional ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          <Clock className="w-3 h-3" /> Provisional
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="w-3 h-3" /> Confirmed
+                      {athlete.position && (
+                        <span className="text-[11px] text-slate-400 block mt-0.5 truncate max-w-[150px]">
+                          {athlete.position}
                         </span>
                       )}
                     </td>
 
-                    <td className="py-4 px-6 text-right">
+                    {/* Location */}
+                    <td className="py-4 px-5">
+                      <div className="text-slate-200 text-xs font-medium">{athlete.district}</div>
+                      <div className="text-[11px] text-slate-400">{athlete.state}</div>
+                    </td>
+
+                    {/* Fixtures & Calibration */}
+                    <td className="py-4 px-5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {athlete.isProvisional ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <Clock className="w-3 h-3" /> Provisional
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 className="w-3 h-3" /> Confirmed
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {athlete.verifiedMatchesCount || 0} Verified Fixture(s)
+                      </span>
+                    </td>
+
+                    {/* Recent Match Performance */}
+                    <td className="py-4 px-5">
+                      <div className="max-w-xs">
+                        <span className="text-xs text-slate-200 font-medium line-clamp-1">
+                          {athlete.recentPerformance || "Fixture results authenticated"}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Verified Score */}
+                    <td className="py-4 px-5 text-right">
                       <span className="text-base font-black text-orange-400 font-mono">
                         {athlete.verifiedPerformanceScore?.toFixed(1) || (athlete.skillIndex / 10).toFixed(1)}
                       </span>
@@ -400,6 +438,57 @@ function LeaderboardInner() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Transparent Ranking Methodology & Calibration Card */}
+      <div className="mt-10 p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                Transparent Sports Ranking Methodology (v2.0-verified)
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Deterministic calculations calibrated on a 0–100 scale using official sanctioned fixtures only.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-xl bg-purple-950/80 border border-purple-500/40 text-[10px] font-bold uppercase tracking-wider text-purple-200">
+            Sample Data &bull; Demo Engine
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 text-xs text-slate-300">
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-850 space-y-2">
+            <span className="text-[10px] uppercase font-bold text-orange-400 tracking-wider block">
+              1. Sport-Specific Calibration
+            </span>
+            <p className="text-slate-400 leading-relaxed">
+              Incompatible sports metrics are never mixed. Athletics uses electronic finish times and distances; Football computes goals, key passes, tackles, and minutes; Badminton evaluates set differentials; Cricket factors batting strike rates and bowling economies.
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-850 space-y-2">
+            <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider block">
+              2. Recency Decay & Consistency Bonus
+            </span>
+            <p className="text-slate-400 leading-relaxed">
+              Recent performances carry greater weight via an exponential decay curve (0.9 multiplier). Athletes maintaining low variance across 3+ fixtures earn up to +3.0 consistency bonus points.
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-850 space-y-2">
+            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+              3. Anti-Fraud & Provisional Graduation
+            </span>
+            <p className="text-slate-400 leading-relaxed">
+              Every score is backed by a SHA-256 hashed scorecard signed by certified referees. Athletes require at least 2 verified match submissions before provisional status graduates to confirmed national standings.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

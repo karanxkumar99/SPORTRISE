@@ -82,17 +82,58 @@ export const RankingController = {
             stateRank: true,
             districtRank: true,
             createdAt: true,
+            matchParticipations: {
+              where: {
+                match: { status: "VERIFIED" },
+              },
+              take: 1,
+              orderBy: {
+                match: { matchDate: "desc" },
+              },
+              select: {
+                placement: true,
+                position: true,
+                individualStats: true,
+                performanceRating: true,
+                match: {
+                  select: {
+                    competitionName: true,
+                    matchFormat: true,
+                    matchDate: true,
+                  },
+                },
+              },
+            },
           },
         }),
         prisma.user.count({ where }),
       ]);
 
       // Assign contextual rank based on current filter view
-      const rankedAthletes = athletes.map((athlete, index) => {
+      const rankedAthletes = athletes.map((athlete: any, index) => {
         const contextualRank = skip + index + 1;
+        const latest = athlete.matchParticipations?.[0];
+        let recentSummary = "";
+        if (latest) {
+          let stats: any = {};
+          if (typeof latest.individualStats === "string") {
+            try {
+              stats = JSON.parse(latest.individualStats);
+            } catch {
+              stats = {};
+            }
+          } else {
+            stats = latest.individualStats || {};
+          }
+          const placement = latest.placement ? `${latest.placement}` : "";
+          const statValues = Object.entries(stats).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(" • ");
+          recentSummary = placement ? `${placement} (${statValues})` : statValues;
+        }
+
         return {
           ...athlete,
           contextualRank,
+          recentPerformance: recentSummary || athlete.position || "Active Contender",
           badge: athlete.isProvisional
             ? "Provisional"
             : contextualRank === 1

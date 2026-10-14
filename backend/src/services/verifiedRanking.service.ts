@@ -229,6 +229,21 @@ export const VerifiedRankingService = {
    * Recalculates National, State, and District ranks for verified athletes in a sport
    */
   async recalculateSportRankings(sport: string) {
+    // 1. Sync verified performance scores from all match fixtures
+    const initialAthletes = await prisma.user.findMany({
+      where: { sport, isVerified: true },
+      select: { id: true },
+    });
+    for (const a of initialAthletes) {
+      await this.recalculateAthleteVerifiedScore(a.id);
+    }
+
+    // Reset ranks for unverified accounts
+    await prisma.user.updateMany({
+      where: { sport, isVerified: false },
+      data: { nationalRank: null, stateRank: null, districtRank: null },
+    });
+
     const athletes = await prisma.user.findMany({
       where: {
         sport,

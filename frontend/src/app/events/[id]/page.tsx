@@ -30,6 +30,7 @@ import {
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import EventApplicationModal from "@/components/events/EventApplicationModal";
+import EventResultsProofSection, { MatchData } from "@/components/events/EventResultsProofSection";
 
 interface Round {
   name: string;
@@ -48,6 +49,7 @@ interface EventDocument {
 interface EventData {
   id: string;
   name: string;
+  matches?: MatchData[];
   category: string;
   sportGame: string;
   bannerImage?: string | null;
@@ -123,7 +125,7 @@ function EventDetailContent() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"about" | "schedule" | "rules" | "documents">("about");
+  const [activeTab, setActiveTab] = useState<"about" | "schedule" | "rules" | "documents" | "results">("about");
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -155,6 +157,12 @@ function EventDetailContent() {
       const res = await api.get(`/events/detail/${eventId}`);
       if (res.data?.success && res.data.event) {
         setEvent(res.data.event);
+        if (
+          res.data.event.dynamicStatus === "Completed" ||
+          (res.data.event.matches && res.data.event.matches.length > 0)
+        ) {
+          setActiveTab("results");
+        }
         // Run initial eligibility check
         checkUserEligibility(res.data.event, testAge, testGender, testInstName);
       } else {
@@ -521,17 +529,30 @@ function EventDetailContent() {
 
                 {/* Apply Button CTA */}
                 <div className="pt-5 space-y-3">
-                  <button
-                    disabled={event.isRegClosed}
-                    onClick={() => setIsApplyModalOpen(true)}
-                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black text-sm tracking-wide shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 transition-all hover:scale-102 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <span>{event.isRegClosed ? "Registration Closed" : "Register / Apply Now"}</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  {event.dynamicStatus === "Completed" ? (
+                    <button
+                      onClick={() => setActiveTab("results")}
+                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm tracking-wide shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all hover:scale-102"
+                    >
+                      <Trophy className="w-4 h-4 text-amber-300" />
+                      <span>View Official Scorecards</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      disabled={event.isRegClosed}
+                      onClick={() => setIsApplyModalOpen(true)}
+                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black text-sm tracking-wide shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 transition-all hover:scale-102 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <span>{event.isRegClosed ? "Registration Closed" : "Register / Apply Now"}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
 
                   <p className="text-[11px] text-slate-400 text-center">
-                    Instant registration confirmation with verified Application Number.
+                    {event.dynamicStatus === "Completed"
+                      ? "Official scorecards and performance records authenticated."
+                      : "Instant registration confirmation with verified Application Number."}
                   </p>
                 </div>
               </div>
@@ -559,8 +580,11 @@ function EventDetailContent() {
       {/* Main Content Sections (Tabs) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto scrollbar-none">
           {[
+            ...(event.dynamicStatus === "Completed" || (event.matches && event.matches.length > 0)
+              ? [{ id: "results", label: "Results & Scorecards", badge: `${event.matches?.length || 0} Fixtures` }]
+              : []),
             { id: "about", label: "About & Format" },
             { id: "schedule", label: "Schedule & Rounds" },
             { id: "rules", label: "Rules & Eligibility" },
@@ -570,13 +594,20 @@ function EventDetailContent() {
               key={tab.id}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
                 activeTab === tab.id
                   ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
                   : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-850"
               }`}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black uppercase ${
+                  activeTab === tab.id ? "bg-white/20 text-white" : "bg-emerald-500/20 text-emerald-400"
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -818,6 +849,21 @@ function EventDetailContent() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Tab 5: Results & Scorecards */}
+        {activeTab === "results" && (
+          <div className="mt-8">
+            <EventResultsProofSection
+              eventName={event.name}
+              sportGame={event.sportGame}
+              hostingInstitution={event.hostingInstitution}
+              institutionLogo={event.institution?.logo}
+              institutionCity={event.institution?.city || event.city}
+              institutionState={event.institution?.state || event.state}
+              matches={event.matches || []}
+            />
           </div>
         )}
       </div>
