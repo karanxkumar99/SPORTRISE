@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import api from "../../lib/api";
 import { OLYMPIC_SPORTS } from "../../data/olympic-sports";
 import { ALL_INDIAN_STATES, INDIAN_STATES_AND_UT } from "../../data/india-locations";
@@ -18,6 +19,7 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 
 interface RankedAthlete {
@@ -236,14 +238,17 @@ function LeaderboardInner() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 items-end">
           {/* Silver #2 */}
           {top2 && (
-            <div className="order-2 md:order-1 bg-slate-900 border-2 border-slate-700/50 rounded-3xl p-5 text-center shadow-xl">
+            <Link
+              href={`/athletes/${top2.athleteId || top2.id}`}
+              className="order-2 md:order-1 bg-slate-900 border-2 border-slate-700/50 rounded-3xl p-5 text-center shadow-xl hover:border-slate-500 hover:scale-[1.02] transition-all block group"
+            >
               <div className="w-10 h-10 rounded-full bg-slate-700 text-slate-200 font-black text-sm flex items-center justify-center mx-auto mb-3 shadow">
                 2
               </div>
               <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                 Silver Podium
               </div>
-              <h3 className="text-lg font-black text-white mt-1 truncate">{top2.fullName}</h3>
+              <h3 className="text-lg font-black text-white mt-1 truncate group-hover:text-orange-400 transition-colors">{top2.fullName}</h3>
               <p className="text-[11px] font-mono text-orange-400 mt-0.5">{top2.athleteId}</p>
               <p className="text-xs text-slate-400 mt-1">{top2.district}, {top2.state}</p>
               <div className="mt-3 p-2 bg-slate-950 rounded-xl border border-slate-800">
@@ -252,11 +257,14 @@ function LeaderboardInner() {
                 </span>
                 <span className="text-[10px] text-slate-500 block">Verified Score (0-100)</span>
               </div>
-            </div>
+            </Link>
           )}
 
           {/* Gold #1 */}
-          <div className="order-1 md:order-2 bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-900 border-2 border-amber-500/50 rounded-3xl p-6 text-center shadow-2xl relative md:-translate-y-2">
+          <Link
+            href={`/athletes/${top1.athleteId || top1.id}`}
+            className="order-1 md:order-2 bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-900 border-2 border-amber-500/50 rounded-3xl p-6 text-center shadow-2xl relative md:-translate-y-2 hover:border-amber-400 hover:scale-[1.02] transition-all block group"
+          >
             <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 font-black text-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-500/30">
               1
             </div>
@@ -264,7 +272,7 @@ function LeaderboardInner() {
               <CrownIcon className="w-4 h-4" />
               National Champion
             </div>
-            <h3 className="text-xl font-black text-white mt-1 truncate">{top1.fullName}</h3>
+            <h3 className="text-xl font-black text-white mt-1 truncate group-hover:text-amber-300 transition-colors">{top1.fullName}</h3>
             <p className="text-xs font-mono text-orange-400 font-bold mt-0.5">{top1.athleteId}</p>
             <p className="text-xs text-slate-300 mt-1">{top1.district}, {top1.state}</p>
             <div className="mt-4 p-3 bg-slate-950 rounded-2xl border border-amber-400/30">
@@ -273,18 +281,21 @@ function LeaderboardInner() {
               </span>
               <span className="text-[10px] text-slate-400 block">Verified Match Score (0 - 100)</span>
             </div>
-          </div>
+          </Link>
 
           {/* Bronze #3 */}
           {top3 && (
-            <div className="order-3 md:order-3 bg-slate-900 border-2 border-amber-700/30 rounded-3xl p-5 text-center shadow-xl">
+            <Link
+              href={`/athletes/${top3.athleteId || top3.id}`}
+              className="order-3 md:order-3 bg-slate-900 border-2 border-amber-700/30 rounded-3xl p-5 text-center shadow-xl hover:border-amber-600 hover:scale-[1.02] transition-all block group"
+            >
               <div className="w-10 h-10 rounded-full bg-amber-700 text-amber-100 font-black text-sm flex items-center justify-center mx-auto mb-3 shadow">
                 3
               </div>
               <div className="text-xs text-amber-600 font-bold uppercase tracking-wider">
                 Bronze Podium
               </div>
-              <h3 className="text-lg font-black text-white mt-1 truncate">{top3.fullName}</h3>
+              <h3 className="text-lg font-black text-white mt-1 truncate group-hover:text-amber-500 transition-colors">{top3.fullName}</h3>
               <p className="text-[11px] font-mono text-orange-400 mt-0.5">{top3.athleteId}</p>
               <p className="text-xs text-slate-400 mt-1">{top3.district}, {top3.state}</p>
               <div className="mt-3 p-2 bg-slate-950 rounded-xl border border-slate-800">
@@ -293,7 +304,7 @@ function LeaderboardInner() {
                 </span>
                 <span className="text-[10px] text-slate-500 block">Verified Score (0-100)</span>
               </div>
-            </div>
+            </Link>
           )}
         </div>
       )}
@@ -343,8 +354,16 @@ function LeaderboardInner() {
                     </td>
 
                     <td className="py-4 px-6">
-                      <div className="font-bold text-white">{athlete.fullName}</div>
-                      <div className="text-[11px] font-mono text-orange-400">{athlete.athleteId}</div>
+                      <Link
+                        href={`/athletes/${athlete.athleteId || athlete.id}`}
+                        className="group block"
+                      >
+                        <div className="font-bold text-white group-hover:text-orange-400 transition-colors flex items-center gap-1.5">
+                          <span>{athlete.fullName}</span>
+                          <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-orange-400" />
+                        </div>
+                        <div className="text-[11px] font-mono text-orange-400">{athlete.athleteId}</div>
+                      </Link>
                     </td>
 
                     <td className="py-4 px-6">

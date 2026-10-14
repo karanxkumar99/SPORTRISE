@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              खेल उत्थान — Empowering India&apos;s grassroots youth sports talent by digitizing athlete profiles, providing Olympic rulebook guidance, and objective AI performance assessment.
+              खेल उत्थान — Empowering India&apos;s grassroots youth sports talent by digitizing athlete profiles, providing Olympic rulebook guidance, and objective verified sports rankings.
             </p>
             <div className="flex items-center gap-2 text-xs text-orange-400 font-semibold pt-1">
               <span>🇮🇳 Jai Hind • Khelo India Aligned</span>
@@ -47,8 +47,8 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/performance-log" className="hover:text-orange-400 transition-colors">
-                  AI Performance Assessment
+                <Link href="/matches" className="hover:text-orange-400 transition-colors">
+                  Verified Matches & Scorecards
                 </Link>
               </li>
               <li>

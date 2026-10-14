@@ -72,13 +72,33 @@ export const VerifiedRankingService = {
 
       score = 50 + setDiff * 15 + (pointRatio - 1.0) * 20;
     } else if (s.includes("athletic") || s.includes("sprint") || s.includes("jump") || s.includes("running")) {
-      // Benchmark based
-      const timingSeconds = Number(stats.timingSeconds) || 0;
-      const distanceMeters = Number(stats.distanceMeters) || 0;
       const position = Number(stats.position) || 1;
-
       const positionBonus = position === 1 ? 25 : position === 2 ? 18 : position === 3 ? 12 : 5;
       score = 55 + positionBonus;
+    } else if (s.includes("swim")) {
+      const position = Number(stats.position) || 1;
+      const positionBonus = position === 1 ? 25 : position === 2 ? 18 : position === 3 ? 12 : 5;
+      const pbBonus = stats.personalBest ? 5 : 0;
+      score = 55 + positionBonus + pbBonus;
+    } else if (s.includes("wrestl") || s.includes("judo")) {
+      const takedowns = Number(stats.takedowns) || 0;
+      const technicalPoints = Number(stats.technicalPoints) || 0;
+      const victoryByPin = stats.victoryByFall || stats.victoryByPin ? 12 : 0;
+      score = 45 + takedowns * 5 + technicalPoints * 2 + victoryByPin;
+    } else if (s.includes("box")) {
+      const roundsWon = Number(stats.roundsWon) || 0;
+      const knockdowns = Number(stats.knockdowns) || 0;
+      score = 48 + roundsWon * 8 + knockdowns * 10;
+    } else if (s.includes("hockey")) {
+      const goals = Number(stats.goals) || 0;
+      const assists = Number(stats.assists) || 0;
+      const pcConversions = Number(stats.penaltyCorners) || 0;
+      score = 45 + goals * 16 + assists * 10 + pcConversions * 6;
+    } else if (s.includes("kabaddi") || s.includes("kho")) {
+      const raidPoints = Number(stats.raidPoints) || 0;
+      const tacklePoints = Number(stats.tacklePoints) || 0;
+      const superRaids = Number(stats.superRaids) || 0;
+      score = 45 + raidPoints * 3 + tacklePoints * 4 + superRaids * 6;
     } else {
       // General sport scoring
       const points = Number(stats.points) || Number(stats.score) || 0;

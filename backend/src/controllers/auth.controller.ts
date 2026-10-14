@@ -5,13 +5,12 @@ import { prisma } from "../prisma";
 import UserModel from "../models/User";
 import OTPModel from "../models/OTP";
 import mailService from "../services/mail.service";
-import aiRankingService from "../services/aiRanking.service";
+import VerifiedRankingService from "../services/verifiedRanking.service";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 
 // Password regex: min 8 chars, 1 uppercase, 1 special char
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
-// Indian mobile: 10 digits, optional +91 prefix
-const MOBILE_REGEX = /^(\+91[\-\s]?)?[6-9]\d{9}$/;
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 export const AuthController = {
   /**
@@ -55,12 +54,47 @@ export const AuthController = {
         });
       }
 
-      // Indian mobile check
-      const cleanedMobile = mobile.replace(/[\s-]/g, "");
-      if (!MOBILE_REGEX.test(cleanedMobile)) {
+      // Indian mobile validation
+      const rawMobile = String(mobile || "").trim();
+      if (/[a-zA-Z]/.test(rawMobile)) {
         return res.status(400).json({
           success: false,
-          message: "Please enter a valid 10-digit Indian mobile number (e.g., +91 XXXXXXXXXX or XXXXXXXXXX).",
+          message: "Please enter a valid 10-digit mobile number. Letters are not allowed.",
+        });
+      }
+      if (/[^0-9]/.test(rawMobile)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid 10-digit mobile number. Special characters are not allowed.",
+        });
+      }
+      if (rawMobile.length < 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number must contain exactly 10 digits.",
+        });
+      }
+      if (rawMobile.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number cannot contain more than 10 digits.",
+        });
+      }
+      if (!/^[6-9]\d{9}$/.test(rawMobile)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid Indian mobile number starting with 6, 7, 8, or 9.",
+        });
+      }
+
+      // Check duplicate mobile for verified athlete
+      const existingUserByMobile = await prisma.user.findFirst({
+        where: { mobile: rawMobile, isVerified: true },
+      });
+      if (existingUserByMobile) {
+        return res.status(409).json({
+          success: false,
+          message: "An athlete account with this mobile number is already registered. Please log in.",
         });
       }
 
@@ -112,7 +146,7 @@ export const AuthController = {
       // Create athlete record
       const newUser = await UserModel.create({
         fullName: fullName.trim(),
-        mobile: cleanedMobile,
+        mobile: rawMobile,
         email: normalizedEmail,
         password: hashedPassword,
         state,
@@ -138,7 +172,7 @@ export const AuthController = {
       });
 
       // Recalculate sport rankings
-      await aiRankingService.recalculateSportRankings(newUser.sport);
+      await VerifiedRankingService.recalculateSportRankings(newUser.sport);
 
       return res.status(201).json({
         success: true,
@@ -207,7 +241,7 @@ export const AuthController = {
       });
 
       // Recalculate sport rankings
-      await aiRankingService.recalculateSportRankings(verifiedUser.sport);
+      await VerifiedRankingService.recalculateSportRankings(verifiedUser.sport);
 
       // Issue JWT Token
       const secret = process.env.JWT_SECRET || "sportrise_grassroots_sports_secret_token_key_2026";
@@ -575,6 +609,124 @@ export const AuthController = {
     } catch (err: any) {
       console.error("Update Profile Error:", err);
       return res.status(500).json({ success: false, message: err.message || "Failed to update profile." });
+    }
+  },
+
+  /**
+   * Public Athlete Profile View (Rankings, Matches, and Direct Links)
+   */
+  async getPublicAthleteProfile(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ id }, { athleteId: id }],
+        },
+        select: {
+          id: true,
+          athleteId: true,
+          fullName: true,
+          sport: true,
+          state: true,
+          district: true,
+          ageCategory: true,
+          gender: true,
+          bio: true,
+          position: true,
+          experienceYears: true,
+          avatarUrl: true,
+          achievements: true,
+          isVerified: true,
+          isProvisional: true,
+          verifiedMatchesCount: true,
+          verifiedPerformanceScore: true,
+          nationalRank: true,
+          stateRank: true,
+          districtRank: true,
+          skillIndex: true,
+          createdAt: true,
+          matchParticipations: {
+            where: {
+              match: {
+                status: "VERIFIED",
+              },
+            },
+            include: {
+              match: {
+                include: {
+                  institution: {
+                    select: { name: true, city: true, state: true, logo: true },
+                  },
+                  evidences: true,
+                },
+              },
+            },
+            orderBy: {
+              match: {
+                matchDate: "desc",
+              },
+            },
+          },
+          rankingHistories: {
+            orderBy: {
+              calculatedAt: "asc",
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Athlete not found." });
+      }
+
+      // Calculate stats breakdown
+      const totalMatches = user.matchParticipations.length;
+      const wins = user.matchParticipations.filter(
+        (p: any) =>
+          p.match.winner &&
+          p.teamName &&
+          p.match.winner.toLowerCase().includes(p.teamName.toLowerCase())
+      ).length;
+      const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
+      const avgScore =
+        totalMatches > 0
+          ? Math.round(
+              (user.matchParticipations.reduce(
+                (sum: number, p: any) => sum + (p.performanceRating || 50),
+                0
+              ) /
+                totalMatches) *
+                10
+            ) / 10
+          : 0;
+
+      let parsedAchievements: string[] = [];
+      if (typeof user.achievements === "string") {
+        try {
+          parsedAchievements = JSON.parse(user.achievements);
+        } catch {
+          parsedAchievements = user.achievements ? [user.achievements] : [];
+        }
+      } else if (Array.isArray(user.achievements)) {
+        parsedAchievements = user.achievements;
+      }
+
+      return res.status(200).json({
+        success: true,
+        athlete: {
+          ...user,
+          rankingHistory: user.rankingHistories,
+          achievements: parsedAchievements,
+          stats: {
+            totalMatches,
+            wins,
+            winRate,
+            avgScore,
+          },
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: "Failed to load athlete profile." });
     }
   },
 };

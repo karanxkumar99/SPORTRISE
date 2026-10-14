@@ -53,6 +53,60 @@ export const InstitutionController = {
         });
       }
 
+      // Indian mobile validation for contactNumber
+      const rawContact = String(contactNumber || "").trim();
+      if (/[a-zA-Z]/.test(rawContact)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid 10-digit mobile number. Letters are not allowed.",
+        });
+      }
+      if (/[^0-9]/.test(rawContact)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid 10-digit mobile number. Special characters are not allowed.",
+        });
+      }
+      if (rawContact.length < 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number must contain exactly 10 digits.",
+        });
+      }
+      if (rawContact.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number cannot contain more than 10 digits.",
+        });
+      }
+      if (!/^[6-9]\d{9}$/.test(rawContact)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid Indian mobile number starting with 6, 7, 8, or 9.",
+        });
+      }
+
+      // Indian mobile validation for coordinatorPhone
+      const rawCoordPhone = String(coordinatorPhone || "").trim();
+      if (/[a-zA-Z]/.test(rawCoordPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid 10-digit mobile number for coordinator. Letters are not allowed.",
+        });
+      }
+      if (rawCoordPhone.length < 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Coordinator mobile number must contain exactly 10 digits.",
+        });
+      }
+      if (rawCoordPhone.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Coordinator mobile number cannot contain more than 10 digits.",
+        });
+      }
+
       const normalizedEmail = email.trim().toLowerCase();
       const existing = await prisma.institution.findUnique({
         where: { email: normalizedEmail },

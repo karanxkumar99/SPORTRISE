@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "SPORTRISE (खेल उत्थान) | Grassroots Indian Youth Sports & School/College Event Management",
   description:
-    "Digitizing athlete profiles, providing Olympic rulebook guidance, AI performance assessment, and school/college event management platform across India.",
+    "Digitizing athlete profiles, Olympic rulebook guidance, AI scorecard verification, and multi-match verified athlete rankings for school and college events across India.",
   keywords: [
     "SportRise",
     "Khelo India",
@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     "Sports Authority of India",
     "Athlete ID",
     "Olympic Sports",
-    "AI Sports Assessment",
-    "National Ranking",
+    "AI Scorecard Verification",
+    "Multi-Match Rankings",
     "Event Management",
   ],
 };

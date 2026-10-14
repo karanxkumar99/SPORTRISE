@@ -39,6 +39,44 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Client validation
+  const validateMobileValue = (val: string): string | null => {
+    if (!val || val.trim() === "") {
+      return "Mobile number is required.";
+    }
+    const trimmed = val.trim();
+    if (/[a-zA-Z]/.test(trimmed)) {
+      return "Please enter a valid 10-digit mobile number. Letters are not allowed.";
+    }
+    if (/[^0-9]/.test(trimmed)) {
+      return "Please enter a valid 10-digit mobile number. Special characters are not allowed.";
+    }
+    if (trimmed.length < 10) {
+      return "Mobile number must contain exactly 10 digits.";
+    }
+    if (trimmed.length > 10) {
+      return "Mobile number cannot contain more than 10 digits.";
+    }
+    if (!/^[6-9]\d{9}$/.test(trimmed)) {
+      return "Please enter a valid Indian mobile number starting with 6, 7, 8, or 9.";
+    }
+    return null;
+  };
+
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setMobile(val);
+    const err = validateMobileValue(val);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (err) {
+        next.mobile = err;
+      } else {
+        delete next.mobile;
+      }
+      return next;
+    });
+  };
+
   const validate = () => {
     const errors: Record<string, string> = {};
 
@@ -46,12 +84,9 @@ export default function RegisterPage() {
       errors.fullName = "Full name is required.";
     }
 
-    const cleanMobile = mobile.replace(/[\s-]/g, "");
-    const mobileRegex = /^(\+91[\-\s]?)?[6-9]\d{9}$/;
-    if (!cleanMobile) {
-      errors.mobile = "Mobile number is required.";
-    } else if (!mobileRegex.test(cleanMobile)) {
-      errors.mobile = "Enter a valid 10-digit Indian mobile number (+91 or 10 digits).";
+    const mobileErr = validateMobileValue(mobile);
+    if (mobileErr) {
+      errors.mobile = mobileErr;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -171,7 +206,7 @@ export default function RegisterPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Arjun Singh"
+                  placeholder="Official Full Name (as per ID)"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className={`w-full bg-slate-950 border ${
@@ -187,19 +222,19 @@ export default function RegisterPage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                  Mobile Number (Indian +91) <span className="text-orange-500">*</span>
+                  Mobile Number (Indian 10-Digit) <span className="text-orange-500">*</span>
                 </label>
                 <input
                   type="tel"
-                  placeholder="+91 XXXXXXXXXX"
+                  placeholder="Enter 10-digit mobile number"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={handleMobileChange}
                   className={`w-full bg-slate-950 border ${
                     fieldErrors.mobile ? "border-red-500" : "border-slate-800 focus:border-emerald-500"
                   } text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20`}
                 />
                 {fieldErrors.mobile && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.mobile}</p>
+                  <p className="mt-1 text-xs text-red-400 font-medium">{fieldErrors.mobile}</p>
                 )}
               </div>
             </div>

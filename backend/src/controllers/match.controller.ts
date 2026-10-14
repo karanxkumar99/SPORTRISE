@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
+import path from "path";
 import { prisma } from "../prisma";
 import VerifiedRankingService from "../services/verifiedRanking.service";
+import ScorecardOcrService from "../services/scorecardOcr.service";
 import mailService from "../services/mail.service";
 import { AuthenticatedInstitutionRequest } from "../middleware/institutionAuth.middleware";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
@@ -21,6 +23,9 @@ export const MatchController = {
         sport,
         competitionName,
         eventId,
+        category,
+        refereeDetails,
+        disqualificationInfo,
         opponentName,
         venue,
         matchDate,
@@ -39,6 +44,19 @@ export const MatchController = {
           success: false,
           message: "Please fill in all required match details (Sport, Competition Name, Venue, Date, Format, Final Score).",
         });
+      }
+
+      // Check event management authorization if eventId provided
+      if (eventId) {
+        const managedEvent = await prisma.event.findFirst({
+          where: { id: eventId, institutionId: instituteId },
+        });
+        if (!managedEvent) {
+          return res.status(403).json({
+            success: false,
+            message: "Institutions are only authorized to submit match results for events they manage.",
+          });
+        }
       }
 
       const parsedDate = new Date(matchDate);
@@ -88,6 +106,9 @@ export const MatchController = {
             competitionName: competitionName.trim(),
             eventId: eventId || null,
             instituteId,
+            category: category?.trim() || null,
+            refereeDetails: typeof refereeDetails === "object" ? JSON.stringify(refereeDetails) : refereeDetails?.trim() || null,
+            disqualificationInfo: disqualificationInfo?.trim() || null,
             opponentName: opponentName?.trim() || null,
             venue: venue.trim(),
             matchDate: parsedDate,
@@ -124,6 +145,9 @@ export const MatchController = {
                   athleteId: athleteUser.id,
                   teamName: p.teamName?.trim() || null,
                   role: p.role?.trim() || null,
+                  position: p.position ? parseInt(p.position, 10) : null,
+                  placement: p.placement?.trim() || null,
+                  disqualified: Boolean(p.disqualified),
                   individualStats: JSON.stringify(statsObj),
                   performanceRating: calculatedRating,
                   verifiedStatsSaved: false,
@@ -133,22 +157,53 @@ export const MatchController = {
           }
         }
 
-        // Insert Evidences
+        // Insert Evidences with SHA256 and Scorecard AI OCR
         if (Array.isArray(evidences) && evidences.length > 0) {
           for (const ev of evidences) {
             if (ev.fileUrl) {
+              const fileName = path.basename(ev.fileUrl);
+              const fullFilePath = path.join(process.cwd(), "uploads", fileName);
+              let sha256 = "";
+              let isDuplicate = false;
+              let ocrResult: any = null;
+
+              try {
+                sha256 = await ScorecardOcrService.computeFileSha256(fullFilePath);
+                if (sha256) {
+                  const dup = await ScorecardOcrService.checkDuplicateEvidence(sha256, match.id);
+                  if (dup) isDuplicate = true;
+                }
+
+                if (ev.category === "scorecard") {
+                  ocrResult = await ScorecardOcrService.processScorecard(ev.fileUrl, ev.fileType || "image/jpeg", {
+                    sport,
+                    competitionName,
+                    finalScore,
+                    winner,
+                    matchDate: parsedDate.toISOString(),
+                    venue,
+                  });
+                }
+              } catch (e: any) {
+                console.warn("Evidence processing warning:", e.message);
+              }
+
               await tx.matchEvidence.create({
                 data: {
                   matchId: match.id,
                   fileUrl: ev.fileUrl,
-                  fileName: ev.fileName || "evidence_file",
+                  fileName: ev.fileName || fileName,
                   fileType: ev.fileType || "application/octet-stream",
                   fileSize: Number(ev.fileSize) || 0,
                   category: ev.category || "scorecard",
+                  sha256Hash: sha256 || null,
+                  ocrData: ocrResult ? JSON.stringify(ocrResult) : null,
+                  ocrStatus: ocrResult?.status || (isDuplicate ? "DUPLICATE_FLAGGED" : "PENDING"),
+                  ocrConfidence: ocrResult ? ocrResult.confidenceScore : null,
                   uploaderId: instituteId,
                   uploaderType: "INSTITUTION",
-                  verificationFlag: "PENDING",
-                  notes: ev.notes?.trim() || null,
+                  verificationFlag: isDuplicate ? "SUSPICIOUS" : "PENDING",
+                  notes: ev.notes?.trim() || (isDuplicate ? "Duplicate evidence hash flagged" : null),
                 },
               });
             }
@@ -523,6 +578,48 @@ export const MatchController = {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err.message || "Failed to raise dispute." });
+    }
+  },
+
+  /**
+   * Run Real-Time AI Scorecard Analysis & Document Integrity Audit
+   */
+  async analyzeScorecard(req: AuthenticatedInstitutionRequest, res: Response) {
+    try {
+      const {
+        fileUrl,
+        mimeType = "image/jpeg",
+        sport,
+        competitionName,
+        finalScore,
+        winner,
+        venue,
+        matchDate,
+      } = req.body;
+
+      if (!fileUrl) {
+        return res.status(400).json({ success: false, message: "Scorecard file URL is required." });
+      }
+
+      const result = await ScorecardOcrService.processScorecard(fileUrl, mimeType, {
+        sport,
+        competitionName,
+        finalScore,
+        winner,
+        venue,
+        matchDate,
+      });
+
+      return res.status(200).json({
+        success: true,
+        result,
+      });
+    } catch (err: any) {
+      console.error("Analyze Scorecard Error:", err);
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Failed to analyze scorecard.",
+      });
     }
   },
 };

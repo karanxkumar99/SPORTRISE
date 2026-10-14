@@ -31,6 +31,7 @@ import {
   ArrowRight,
   Check,
   Zap,
+  User,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -62,6 +63,8 @@ export default function DashboardPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -176,6 +179,19 @@ export default function DashboardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError("File size exceeds 5MB limit. Please select a smaller photo.");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      setAvatarError("Unsupported image format. Allowed formats: JPG, PNG, WEBP, GIF.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setAvatarError(null);
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -185,9 +201,14 @@ export default function DashboardPage() {
       });
       if (res.data?.success && res.data.file?.url) {
         setEditAvatarUrl(res.data.file.url);
+      } else {
+        setAvatarError(res.data?.message || "Avatar upload failed.");
       }
     } catch (err: any) {
-      alert("Avatar upload failed: " + err.message);
+      setAvatarError(err.response?.data?.message || err.message || "Avatar upload failed.");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
     }
   };
 
@@ -787,12 +808,39 @@ export default function DashboardPage() {
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
                   Profile Photo (Avatar)
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700"
-                />
+                <div className="flex items-center gap-4 p-3 bg-slate-950 rounded-2xl border border-slate-800">
+                  <div className="w-14 h-14 rounded-full bg-slate-900 border-2 border-orange-500/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {editAvatarUrl ? (
+                      <img
+                        src={editAvatarUrl}
+                        alt="Avatar Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-7 h-7 text-slate-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                      className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-500/20 file:text-orange-400 hover:file:bg-orange-500/30 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      JPG, PNG, WEBP, or GIF (Max 5MB)
+                    </p>
+                    {uploadingAvatar && (
+                      <p className="text-[11px] text-orange-400 font-bold animate-pulse">
+                        Uploading & framing image...
+                      </p>
+                    )}
+                    {avatarError && (
+                      <p className="text-[11px] text-red-400 font-semibold">{avatarError}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">

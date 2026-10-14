@@ -10,5 +10,6 @@ router.post("/resend-otp", AuthController.resendOtp);
 router.post("/login", AuthController.login);
 router.get("/profile", requireAuth, AuthController.getProfile);
 router.put("/profile", requireAuth, AuthController.updateProfile);
+router.get("/athletes/:id", AuthController.getPublicAthleteProfile);
 
 export default router;

@@ -56,8 +56,34 @@ export default function InstitutionRegisterPage() {
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorPhone, setCoordinatorPhone] = useState("");
 
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [coordinatorPhoneError, setCoordinatorPhoneError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const validateMobileValue = (val: string): string | null => {
+    if (!val || val.trim() === "") {
+      return "Mobile number is required.";
+    }
+    const trimmed = val.trim();
+    if (/[a-zA-Z]/.test(trimmed)) {
+      return "Please enter a valid 10-digit mobile number. Letters are not allowed.";
+    }
+    if (/[^0-9]/.test(trimmed)) {
+      return "Please enter a valid 10-digit mobile number. Special characters are not allowed.";
+    }
+    if (trimmed.length < 10) {
+      return "Mobile number must contain exactly 10 digits.";
+    }
+    if (trimmed.length > 10) {
+      return "Mobile number cannot contain more than 10 digits.";
+    }
+    if (!/^[6-9]\d{9}$/.test(trimmed)) {
+      return "Please enter a valid Indian mobile number starting with 6, 7, 8, or 9.";
+    }
+    return null;
+  };
 
   const handleFetchCurrentLocation = async () => {
     setFetchingLocation(true);
@@ -97,6 +123,20 @@ export default function InstitutionRegisterPage() {
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    const cErr = validateMobileValue(contactNumber);
+    if (cErr) {
+      setContactError(cErr);
+      setError(`Contact Number: ${cErr}`);
+      return;
+    }
+
+    const pErr = validateMobileValue(coordinatorPhone);
+    if (pErr) {
+      setCoordinatorPhoneError(pErr);
+      setError(`Coordinator Phone: ${pErr}`);
       return;
     }
 
@@ -187,7 +227,7 @@ export default function InstitutionRegisterPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. St. Xavier's Senior Secondary School"
+                  placeholder="Official institution name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
@@ -217,7 +257,7 @@ export default function InstitutionRegisterPage() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. sports@institution.edu.in"
+                  placeholder="sports@institution.edu.in"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
@@ -226,16 +266,23 @@ export default function InstitutionRegisterPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Official Contact Number <span className="text-orange-500">*</span>
+                  Official Contact Number (10 Digits) <span className="text-orange-500">*</span>
                 </label>
                 <input
                   type="tel"
                   required
-                  placeholder="+91 XXXXXXXXXX"
+                  placeholder="Enter 10-digit contact number"
                   value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setContactNumber(v);
+                    setContactError(validateMobileValue(v));
+                  }}
+                  className={`w-full bg-slate-950 border ${contactError ? "border-red-500" : "border-slate-800 focus:border-blue-500"} text-white rounded-xl px-4 py-3 text-sm focus:outline-none`}
                 />
+                {contactError && (
+                  <p className="mt-1 text-xs text-red-400 font-medium">{contactError}</p>
+                )}
               </div>
 
               <div>
@@ -473,16 +520,23 @@ export default function InstitutionRegisterPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Coordinator Phone Number <span className="text-orange-500">*</span>
+                  Coordinator Phone Number (10 Digits) <span className="text-orange-500">*</span>
                 </label>
                 <input
                   type="tel"
                   required
-                  placeholder="+91 XXXXXXXXXX"
+                  placeholder="Enter 10-digit mobile number"
                   value={coordinatorPhone}
-                  onChange={(e) => setCoordinatorPhone(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCoordinatorPhone(v);
+                    setCoordinatorPhoneError(validateMobileValue(v));
+                  }}
+                  className={`w-full bg-slate-950 border ${coordinatorPhoneError ? "border-red-500" : "border-slate-800 focus:border-amber-500"} text-white rounded-xl px-4 py-3 text-sm focus:outline-none`}
                 />
+                {coordinatorPhoneError && (
+                  <p className="mt-1 text-xs text-red-400 font-medium">{coordinatorPhoneError}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">

@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   Building2,
   ExternalLink,
+  UploadCloud,
+  Trophy,
 } from "lucide-react";
 
 interface DashboardStats {
@@ -126,8 +128,15 @@ export default function InstitutionDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
+              href="/institution/matches/submit"
+              className="px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm rounded-xl shadow-xl shadow-emerald-500/25 transition-all flex items-center gap-2 hover:scale-105"
+            >
+              <UploadCloud className="w-5 h-5" />
+              Submit Match Results
+            </Link>
+            <Link
               href="/institution/events/create"
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black text-sm rounded-xl shadow-xl shadow-orange-500/25 transition-all flex items-center gap-2 hover:scale-105"
+              className="px-5 py-3 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black text-sm rounded-xl shadow-xl shadow-orange-500/25 transition-all flex items-center gap-2 hover:scale-105"
             >
               <CalendarPlus className="w-5 h-5" />
               Host an Event
@@ -233,6 +242,44 @@ export default function InstitutionDashboardPage() {
               {stats.pendingApplications}
             </span>
             <span className="text-[10px] text-orange-300/70 block mt-0.5">Awaiting Action</span>
+          </div>
+        </div>
+
+        {/* AI Scorecard & Results Verification Card */}
+        <div className="mb-8 p-6 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-teal-950/30 border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-xl">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl flex-shrink-0 border border-emerald-500/30">
+              <Trophy className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-white">
+                  Official Match Results & AI Scorecard Verification
+                </h3>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                  Anti-Fraud Enabled
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Submit completed fixture outcomes, upload official scorecards with SHA-256 tamper-detection, and trigger deterministic multi-match athlete ranking recalculations across India.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+            <Link
+              href="/institution/matches/submit"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-1.5"
+            >
+              <UploadCloud className="w-4 h-4" />
+              Submit Results
+            </Link>
+            <Link
+              href="/institution/matches"
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+            >
+              <Trophy className="w-4 h-4 text-emerald-400" />
+              View Matches
+            </Link>
           </div>
         </div>
 

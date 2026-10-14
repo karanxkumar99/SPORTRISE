@@ -483,16 +483,16 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5 group-hover:scale-110 transition-transform">
                   <Sparkles className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">AI Assessment Engine</h3>
+                <h3 className="text-lg font-bold text-white mb-2">AI Scorecard Verification</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Input sport-specific metrics (sprint times, snatch weights, agility scores) and let AI compute a calibrated 0-1000 Skill Index with targeted drills.
+                  Optical Character Recognition and Document AI read physical scorecards, verify athlete performances, detect duplicate claims, and feed official multi-match rankings.
                 </p>
               </div>
               <Link
-                href="/performance-log"
+                href="/matches"
                 className="mt-6 text-xs font-bold text-amber-400 flex items-center gap-1 group-hover:gap-2 transition-all"
               >
-                Assess Performance <ChevronRight className="w-4 h-4" />
+                Explore Verified Matches <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 

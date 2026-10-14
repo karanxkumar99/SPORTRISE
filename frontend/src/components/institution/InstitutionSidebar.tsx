@@ -32,8 +32,8 @@ export const InstitutionSidebar: React.FC = () => {
   const navItems = [
     { label: "Dashboard", href: "/institution/dashboard", icon: LayoutDashboard },
     { label: "Institution Profile", href: "/institution/profile", icon: Building2 },
-    { label: "Submit Match Scorecard", href: "/institution/matches/create", icon: UploadCloud, highlight: true },
-    { label: "Match Submissions", href: "/institution/matches", icon: Trophy },
+    { label: "Submit Match Results", href: "/institution/matches/submit", icon: UploadCloud, highlight: true },
+    { label: "Match History & Verification", href: "/institution/matches", icon: Trophy },
     { label: "Create Event", href: "/institution/events/create", icon: CalendarPlus },
     { label: "Upcoming & Ongoing", href: "/institution/events?filter=upcoming", icon: CalendarCheck },
     { label: "Draft Events", href: "/institution/events?filter=draft", icon: FileEdit },

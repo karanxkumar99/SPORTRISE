@@ -55,6 +55,45 @@ export default function InstitutionProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError("File size exceeds 5MB limit. Please select a smaller logo file.");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      setLogoError("Unsupported image format. Allowed formats: JPG, PNG, WEBP, GIF.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    setLogoError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await api.post("/upload/single", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data?.success && res.data.file?.url) {
+        setLogo(res.data.file.url);
+      } else {
+        setLogoError(res.data?.message || "Logo upload failed.");
+      }
+    } catch (err: any) {
+      setLogoError(err.response?.data?.message || err.message || "Logo upload failed.");
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
 
   const handleFetchCurrentLocation = async () => {
     setFetchingLocation(true);
@@ -236,17 +275,39 @@ export default function InstitutionProfilePage() {
                 </select>
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Institution Logo URL
+                  Official Institution Logo / Crest
                 </label>
-                <input
-                  type="url"
-                  value={logo}
-                  onChange={(e) => setLogo(e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
-                />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-blue-500/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {logo ? (
+                      <img src={logo} alt="Logo Preview" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-slate-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5 w-full">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                      className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Upload PNG, JPG, or WEBP institution emblem (Max 5MB)
+                    </p>
+                    {uploadingLogo && (
+                      <p className="text-[11px] text-blue-400 font-bold animate-pulse">
+                        Uploading official emblem...
+                      </p>
+                    )}
+                    {logoError && (
+                      <p className="text-[11px] text-red-400 font-semibold">{logoError}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>

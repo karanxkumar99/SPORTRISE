@@ -187,6 +187,9 @@ model Match {
   venue               String
   matchDate           DateTime
   matchFormat         String             // T20, 90-min, 3-sets, Sprint 100m, etc.
+  category            String?            // U-14, U-17, U-19, Senior, etc.
+  refereeDetails      String?            // JSON string with referee name, license, remarks
+  disqualificationInfo String?           // Disqualification notes if any
   rulesSummary        String?
   finalScore          String             // e.g. "3 - 1" or "182/4 vs 178/9"
   winner              String?            // Name of winning team/athlete
@@ -212,6 +215,9 @@ model MatchParticipant {
   athlete             User     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   teamName            String?
   role                String?  // Captain, Batsman, Forward, Goalkeeper, etc.
+  position            Int?     // 1, 2, 3 finishing place
+  placement           String?  // Gold, Silver, Bronze, Finalist, etc.
+  disqualified        Boolean  @default(false)
   individualStats     String   // JSON string of sport-specific statistics
   performanceRating   Float?   // Match specific performance rating (0-100)
   verifiedStatsSaved  Boolean  @default(false)
@@ -227,6 +233,10 @@ model MatchEvidence {
   fileType         String   // MIME type
   fileSize         Int      // In bytes
   category         String   // scorecard, scoreboard, video, certificate, id_proof, other
+  sha256Hash       String?  // SHA-256 integrity hash for anti-fraud
+  ocrData          String?  // Structured OCR result / analysis report
+  ocrStatus        String?  // UNCONFIGURED, PENDING, EXTRACTED, HUMAN_REVIEW_REQUIRED, FAILED
+  ocrConfidence    Float?   // 0.0 - 1.0 confidence score
   uploaderId       String
   uploaderType     String   @default("INSTITUTION") // INSTITUTION, ATHLETE, ADMIN
   verificationFlag String   @default("PENDING")     // PENDING, VALID, SUSPICIOUS
