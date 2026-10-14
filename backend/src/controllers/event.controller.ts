@@ -309,6 +309,8 @@ export const EventController = {
       } else if (tab === "Ongoing") {
         where.startDate = { lte: now };
         where.endDate = { gte: now };
+      } else if (tab === "Completed") {
+        where.endDate = { lt: now };
       } else if (tab === "Sports") {
         where.category = { in: ["Sports Tournament", "Athletics", "Football", "Cricket", "Basketball", "Volleyball", "Badminton", "Chess", "Esports"] };
       } else if (tab === "Academic") {

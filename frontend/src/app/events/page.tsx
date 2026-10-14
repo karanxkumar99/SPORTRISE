@@ -73,8 +73,9 @@ export default function StudentEventsMarketplace() {
 
   const tabs = [
     { id: "All", label: "All Events" },
-    { id: "Upcoming", label: "Upcoming", badge: "Upcoming" },
-    { id: "Ongoing", label: "Ongoing Now", badge: "Live" },
+    { id: "Ongoing", label: "Ongoing Events", badge: "Live" },
+    { id: "Upcoming", label: "Upcoming Events", badge: "Upcoming" },
+    { id: "Completed", label: "Completed Events", badge: "Past" },
     { id: "Sports", label: "Sports & Tournaments" },
     { id: "Academic", label: "Academic Competitions" },
     { id: "Cultural", label: "Cultural Events" },
@@ -497,11 +498,16 @@ export default function StudentEventsMarketplace() {
                       </span>
                     </div>
 
-                    {/* Category pill bottom left */}
-                    <div className="absolute bottom-3 left-3">
+                    {/* Category pill and demo badge bottom left */}
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 flex-wrap">
                       <span className="px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-bold text-orange-400">
                         {evt.sportGame || evt.category}
                       </span>
+                      {(evt.name.includes("DEMO") || evt.shortDescription?.includes("SAMPLE")) && (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-900/90 backdrop-blur-md border border-purple-500/50 text-[10px] font-black uppercase tracking-wider text-purple-200 shadow-sm">
+                          Sample Data &bull; Demo
+                        </span>
+                      )}
                     </div>
                   </div>
 

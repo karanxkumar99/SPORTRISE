@@ -435,6 +435,28 @@ function EventDetailContent() {
                   </span>
                 </div>
 
+                {/* Free vs Paid / Pay at Venue Notice */}
+                {event.isPaid ? (
+                  <div className="py-3 px-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-300 text-[11px] uppercase tracking-wide mb-1">
+                      <IndianRupee className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Payment Method & Instructions</span>
+                    </div>
+                    <p className="text-slate-200 text-xs leading-relaxed">
+                      Payment can be made directly at the event venue. Please complete your payment at the registration desk before participating.
+                    </p>
+                    <div className="mt-2 pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] text-amber-400/90">
+                      <span>Registration Fee: ₹{event.registrationFee}</span>
+                      <span className="font-semibold">Pay at Venue Enabled</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-2.5 px-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs flex items-center gap-2 text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span><strong>Free Registration:</strong> No entry fees required for this event.</span>
+                  </div>
+                )}
+
                 {/* Important Dates */}
                 <div className="py-4 space-y-3 text-xs border-b border-slate-800">
                   <div className="flex items-center justify-between">

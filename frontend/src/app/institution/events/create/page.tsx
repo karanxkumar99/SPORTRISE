@@ -173,6 +173,17 @@ export default function CreateEventPage() {
   const [visibility, setVisibility] = useState("Public");
   const [status, setStatus] = useState("Published");
 
+  // Section E & F Enhanced State (Pay at Venue, Facilities, Policies)
+  const [paymentMethod, setPaymentMethod] = useState<"venue" | "online" | "both">("venue");
+  const [payAtVenue, setPayAtVenue] = useState<boolean>(true);
+  const [paymentDeadline, setPaymentDeadline] = useState(
+    new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)
+  );
+  const [accommodation, setAccommodation] = useState("Available on prior request at campus hostel");
+  const [foodRefreshments, setFoodRefreshments] = useState("Hydration and energy snacks provided at venue");
+  const [medicalAssistance, setMedicalAssistance] = useState("Dedicated sports physician and first aid station on-site");
+  const [emergencyContact, setEmergencyContact] = useState(institution?.coordinatorPhone || "+91 XXXXXXXXXX");
+
   // Step 7: Documents
   const [brochureUrl, setBrochureUrl] = useState("");
   const [rulebookUrl, setRulebookUrl] = useState("");
@@ -259,6 +270,15 @@ export default function CreateEventPage() {
           generalRules,
           codeOfConduct,
           cancellationPolicy,
+          payAtVenue: isPaid ? payAtVenue : false,
+          paymentMethod: isPaid ? paymentMethod : "none",
+          paymentNotice: isPaid && payAtVenue
+            ? "Payment can be made directly at the event venue. Please complete your payment at the registration desk before participating."
+            : undefined,
+          accommodation,
+          foodRefreshments,
+          medicalAssistance,
+          emergencyContact,
         },
         documents: [
           ...(brochureUrl ? [{ title: "Event Brochure", url: brochureUrl }] : []),
@@ -1015,81 +1035,165 @@ export default function CreateEventPage() {
           {/* STEP 6: Registration & Fee */}
           {currentStep === 6 && (
             <div className="space-y-6">
-              <h2 className="text-base font-bold text-white mb-4">
-                Step 6: Registration Fee & Visibility
-              </h2>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-orange-400" />
+                  Section E: Registration Fee & Payment Details
+                </h2>
+                <span className="text-xs text-slate-400 font-semibold">Step 6 of 8</span>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">
-                    Fee Structure
+              <div className="space-y-4">
+                {/* Is this event paid or free? */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                    Is this event paid or free? <span className="text-orange-500">*</span>
                   </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label
+                      onClick={() => {
+                        setIsPaid(false);
+                        setRegistrationFee(0);
+                      }}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        !isPaid
+                          ? "bg-emerald-500/10 border-emerald-500 text-white shadow-lg"
+                          : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
                       <input
                         type="radio"
+                        name="feeType"
                         checked={!isPaid}
                         onChange={() => {
                           setIsPaid(false);
                           setRegistrationFee(0);
                         }}
+                        className="mt-1 text-emerald-500"
                       />
-                      <span className="text-xs font-bold text-white">Free Event (₹0)</span>
+                      <div>
+                        <span className="text-sm font-bold block text-white">Free Registration</span>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Athletes will see &ldquo;Free Registration&rdquo; with no payment prompts.
+                        </p>
+                      </div>
                     </label>
 
-                    <label className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer">
+                    <label
+                      onClick={() => setIsPaid(true)}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        isPaid
+                          ? "bg-orange-500/10 border-orange-500 text-white shadow-lg"
+                          : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
                       <input
                         type="radio"
+                        name="feeType"
                         checked={isPaid}
                         onChange={() => setIsPaid(true)}
+                        className="mt-1 text-orange-500"
                       />
-                      <span className="text-xs font-bold text-white">Paid Registration</span>
+                      <div>
+                        <span className="text-sm font-bold block text-white">Paid Registration</span>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Set registration fee in INR. Configure Online or Pay at Venue desks.
+                        </p>
+                      </div>
                     </label>
                   </div>
                 </div>
 
                 {isPaid && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        Registration Fee per Athlete / Team (₹)
+                  <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Registration Fee in INR (₹) <span className="text-orange-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          placeholder="e.g. 300"
+                          value={registrationFee}
+                          onChange={(e) => setRegistrationFee(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Payment Mode
+                        </label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e: any) => {
+                            setPaymentMethod(e.target.value);
+                            if (e.target.value === "venue" || e.target.value === "both") {
+                              setPayAtVenue(true);
+                            }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500"
+                        >
+                          <option value="venue">Offline at the Venue (Pay at Venue)</option>
+                          <option value="online">Online Payment Gateway</option>
+                          <option value="both">Both (Online and Pay at Venue)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Payment Deadline
+                        </label>
+                        <input
+                          type="date"
+                          value={paymentDeadline}
+                          onChange={(e) => setPaymentDeadline(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pay at Venue Checkbox and Exact Required Message */}
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={payAtVenue}
+                          onChange={(e) => setPayAtVenue(e.target.checked)}
+                          className="w-4 h-4 text-orange-500 bg-slate-900 border-slate-700 rounded focus:ring-orange-500"
+                        />
+                        <span className="text-xs font-bold text-amber-300">
+                          Enable &ldquo;Pay at Venue&rdquo; Desk
+                        </span>
                       </label>
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="e.g. 250"
-                        value={registrationFee}
-                        onChange={(e) => setRegistrationFee(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
-                      />
+
+                      {payAtVenue && (
+                        <div className="mt-2 text-xs text-slate-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800 leading-relaxed">
+                          <span className="font-semibold text-amber-400 block mb-1">
+                            Notice Displayed on Event Details Page:
+                          </span>
+                          <p className="italic text-slate-200">
+                            &ldquo;Payment can be made directly at the event venue. Please complete your payment at the registration desk before participating.&rdquo;
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        GST / Taxes (%)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="e.g. 0 or 18"
-                        value={gstPercent}
-                        onChange={(e) => setGstPercent(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        Refund Policy
+                        Cancellation and Refund Policy
                       </label>
                       <input
                         type="text"
+                        placeholder="e.g. Full refund if tournament is rescheduled or cancelled by organizer."
                         value={refundPolicy}
                         onChange={(e) => setRefundPolicy(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
+                        className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500"
                       />
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <div>
@@ -1125,14 +1229,90 @@ export default function CreateEventPage() {
             </div>
           )}
 
-          {/* STEP 7: Documents */}
+          {/* STEP 7: Additional Information & Documents */}
           {currentStep === 7 && (
-            <div className="space-y-5">
-              <h2 className="text-base font-bold text-white mb-4">
-                Step 7: Documents & Downloadable Attachments
-              </h2>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Award className="w-5 h-5 text-orange-400" />
+                  Section F: Additional Information & Logistics
+                </h2>
+                <span className="text-xs text-slate-400 font-semibold">Step 7 of 8</span>
+              </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Accommodation Availability
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Subsidized campus hostel available on prior request"
+                    value={accommodation}
+                    onChange={(e) => setAccommodation(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Food & Refreshments
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hydration & energy snacks provided for all athletes"
+                    value={foodRefreshments}
+                    onChange={(e) => setFoodRefreshments(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Medical Assistance & First Aid
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dedicated first aid station and sports physician on-site"
+                    value={medicalAssistance}
+                    onChange={(e) => setMedicalAssistance(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Emergency Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 XXXXXXXXXX"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Documents & Rulebook PDFs */}
+              <div className="space-y-4 pt-3 border-t border-slate-800">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Event Rulebook & Document Attachments
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Event Rulebook / Technical Guidelines PDF URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/rules.pdf"
+                    value={rulebookUrl}
+                    onChange={(e) => setRulebookUrl(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     Official Event Brochure (PDF Link)
@@ -1142,26 +1322,13 @@ export default function CreateEventPage() {
                     placeholder="https://example.com/brochure.pdf"
                     value={brochureUrl}
                     onChange={(e) => setBrochureUrl(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
+                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Rulebook / Regulation PDF Link
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com/rulebook.pdf"
-                    value={rulebookUrl}
-                    onChange={(e) => setRulebookUrl(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Parental Consent Form / Schedule PDF
+                    Parental Consent Form / Fixtures PDF
                   </label>
                   <input
                     type="url"
@@ -1254,12 +1421,26 @@ export default function CreateEventPage() {
               <button
                 type="button"
                 onClick={() => setCurrentStep(currentStep + 1)}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-blue-600/20"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20"
               >
                 Continue to Step {currentStep + 1} <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                >
+                  Edit Event (Step 1)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/institution/dashboard")}
+                  className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white text-xs font-bold rounded-xl transition-all border border-slate-800"
+                >
+                  Cancel Event
+                </button>
                 <button
                   type="button"
                   disabled={loading}
@@ -1272,9 +1453,9 @@ export default function CreateEventPage() {
                   type="button"
                   disabled={loading}
                   onClick={() => handlePublish("Published")}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-xl shadow-blue-500/25 transition-all flex items-center gap-2 hover:scale-105"
+                  className="px-6 py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-bold rounded-xl shadow-xl shadow-orange-500/25 transition-all flex items-center gap-2 hover:scale-105"
                 >
-                  {loading ? "Publishing..." : "Publish Event to Live Marketplace"}
+                  {loading ? "Publishing..." : "Submit & Publish Event"}
                   <CheckCircle2 className="w-4 h-4" />
                 </button>
               </div>

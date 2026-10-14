@@ -237,15 +237,17 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <h3 className="text-2xl font-black text-white">Application Submitted!</h3>
-              <p className="text-sm text-slate-300 mt-2">
-                Your entry for <span className="font-bold text-white">{event.name}</span> has been successfully registered.
-              </p>
+              
+              {/* Exact Required Success Notification Banner */}
+              <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-lg">
+                Your form has been submitted successfully! We will notify you about your application status and further event updates through WhatsApp and email.
+              </div>
 
               {/* Unique Application ID Box */}
               <div className="my-6 p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
                 <div className="text-left">
                   <p className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">
-                    Official Application ID
+                    Official Application ID / Reference No.
                   </p>
                   <p className="text-xl font-mono font-black text-orange-400 mt-0.5">
                     {submittedAppNumber}

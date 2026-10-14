@@ -127,10 +127,10 @@ export default function InstitutionDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/institution/events/create"
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 hover:scale-105"
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-black text-sm rounded-xl shadow-xl shadow-orange-500/25 transition-all flex items-center gap-2 hover:scale-105"
             >
-              <CalendarPlus className="w-4 h-4" />
-              Create New Event
+              <CalendarPlus className="w-5 h-5" />
+              Host an Event
             </Link>
             <Link
               href="/events"
