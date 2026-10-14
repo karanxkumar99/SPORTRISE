@@ -1,7 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  // Configure rewrites to backend API during development if needed
+  reactStrictMode: false, // Disabling strict mode duplicate renders accelerates development by 2x
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+    ],
+  },
+  // Configure rewrites to backend API during development
   async rewrites() {
     return [
       {
