@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma } from "../src/prisma";
 
 async function testLiveRegistration() {
   console.log("Testing live athlete registration dispatch via Resend API...");

@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma } from "../src/prisma";
 
 async function cleanDatabase() {
   console.log("🧹 Clearing all database records for a fresh start...");

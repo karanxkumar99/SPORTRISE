@@ -1,7 +1,7 @@
-import { prisma } from "./prisma";
-import UserModel from "./models/User";
-import OTPModel from "./models/OTP";
-import VerifiedRankingService from "./services/verifiedRanking.service";
+import { prisma } from "../src/prisma";
+import UserModel from "../src/models/User";
+import OTPModel from "../src/models/OTP";
+import VerifiedRankingService from "../src/services/verifiedRanking.service";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 

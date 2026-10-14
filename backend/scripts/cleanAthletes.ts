@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma } from "../src/prisma";
 
 async function main() {
   console.log("Inspecting current database state...");

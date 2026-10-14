@@ -9,7 +9,11 @@
     "start": "node dist/app.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "tsx src/seed.ts"
+    "prisma:seed": "tsx scripts/seedRealisticSportsData.ts",
+    "seed": "tsx scripts/seedRealisticSportsData.ts",
+    "seed:events": "tsx scripts/seedDemoEvents.ts",
+    "test:integration": "tsx scripts/testIntegration.ts",
+    "clean": "tsx scripts/cleanAthletes.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

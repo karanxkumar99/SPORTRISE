@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
-import aiRankingService from "./services/aiRanking.service";
+import { prisma } from "../src/prisma";
+import aiRankingService from "../src/services/aiRanking.service";
 
 async function main() {
   console.log("🌱 Starting SPORTRISE database seeding...");

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { prisma } from "./prisma";
-import VerifiedRankingService from "./services/verifiedRanking.service";
+import { prisma } from "../src/prisma";
+import VerifiedRankingService from "../src/services/verifiedRanking.service";
 
 /**
  * Computes a deterministic SHA-256 hash string for mock certificates & scorecards

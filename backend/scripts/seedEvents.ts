@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { prisma } from "../src/prisma";
 
 async function seedInstitutionsAndEvents() {
   console.log("🏫 Seeding verified institutions and real Olympic/academic events...");
