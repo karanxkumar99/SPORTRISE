@@ -279,6 +279,48 @@ export async function seedRealisticSportsData() {
       ]),
       avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=400&q=80",
     },
+    {
+      athleteId: "SR-IND-26-ARC-43210",
+      fullName: "Tarundeep Das",
+      mobile: "9835012345",
+      email: "tarundeep.das@sportrise.demo",
+      password: defaultPassword,
+      state: "Jharkhand",
+      district: "East Singhbhum",
+      sport: "Archery",
+      ageCategory: "U-21",
+      gender: "Male",
+      position: "Recurve Archer",
+      experienceYears: 6,
+      bio: "Tata Archery Academy cadet specializing in 70m Olympic Recurve. Consistently shooting 680+ qualification rounds.",
+      achievements: JSON.stringify([
+        "Gold - All-India Inter-University Archery Championship (688/720)",
+        "Junior National Team Trials Top Seed",
+        "Khelo India University Games Gold Medalist",
+      ]),
+      avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80",
+    },
+    {
+      athleteId: "SR-IND-26-WLF-54321",
+      fullName: "Kavita Chanu Devi",
+      mobile: "9862145678",
+      email: "kavita.chanu@sportrise.demo",
+      password: defaultPassword,
+      state: "Manipur",
+      district: "Imphal West",
+      sport: "Weightlifting",
+      ageCategory: "U-19",
+      gender: "Female",
+      position: "49kg Olympic Lifter",
+      experienceYears: 4,
+      bio: "Explosive lifter trained at SAI Centre of Excellence Imphal. Indian Junior National record holder in 49kg clean and jerk.",
+      achievements: JSON.stringify([
+        "Gold - National Junior Weightlifting Championship (203kg Total)",
+        "Junior National Record 49kg Clean & Jerk (115kg)",
+        "Khelo India Youth Games 2025 Gold Medalist",
+      ]),
+      avatarUrl: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=400&q=80",
+    },
   ];
 
   // Upsert all athletes safely without wiping existing accounts
@@ -1213,6 +1255,155 @@ Tournament was officiated by AIFF Category 1 referees. Complete match events, go
     },
   });
 
+  // Match 9: Archery National Championship
+  const tarunId = createdAthletesMap.get("SR-IND-26-ARC-43210")!;
+  const matchArchery = await prisma.match.upsert({
+    where: { matchNumber: "SR-M-2026-ARC-701" },
+    update: {
+      instituteId: stStephens.id,
+      status: "VERIFIED",
+      isCompleted: true,
+    },
+    create: {
+      matchNumber: "SR-M-2026-ARC-701",
+      sport: "Archery",
+      competitionName: "All-India Inter-University Archery Championship 2026 - 70m Recurve Finals",
+      instituteId: stStephens.id,
+      venue: "Yamuna Sports Complex Archery Ground, New Delhi",
+      matchDate: new Date("2026-09-19T10:00:00.000Z"),
+      matchFormat: "70m Olympic Recurve (72 Arrows)",
+      category: "Senior Men Recurve",
+      refereeDetails: JSON.stringify({
+        refereeName: "Sanjeeva Singh (AAI International Judge)",
+        license: "AAI-INTL-9042",
+        remarks: "World Archery target face certified. 10x target boss verified.",
+      }),
+      finalScore: "688 / 720 (24 X-Rings, 42 Tens)",
+      winner: "Tarundeep Das (Tata Archery / Ranchi University)",
+      resultSummary: "Tarundeep Das recorded an exceptional 688/720 to secure Gold by 12 points.",
+      status: "VERIFIED",
+      isCompleted: true,
+      reviewedBy: "Chief Integrity Officer Sharma",
+      reviewedAt: new Date("2026-09-19T14:00:00.000Z"),
+    },
+  });
+
+  await prisma.matchParticipant.deleteMany({ where: { matchId: matchArchery.id } });
+  await prisma.matchParticipant.create({
+    data: {
+      matchId: matchArchery.id,
+      athleteId: tarunId,
+      teamName: "Ranchi University Archery Team",
+      role: "Recurve Archer (Target 14B)",
+      position: 1,
+      placement: "Gold",
+      individualStats: JSON.stringify({
+        discipline: "70m Recurve",
+        totalScore: "688/720",
+        xRings: 24,
+        tensCount: 42,
+        half1Score: 345,
+        half2Score: 343,
+        finalRank: "1st Place (Gold)",
+      }),
+      performanceRating: 95.5,
+      verifiedStatsSaved: true,
+    },
+  });
+
+  await prisma.matchEvidence.deleteMany({ where: { matchId: matchArchery.id } });
+  await prisma.matchEvidence.create({
+    data: {
+      matchId: matchArchery.id,
+      fileUrl: "https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=1200&q=80",
+      fileName: "archery_official_recurve_scoresheet.jpg",
+      fileType: "image/jpeg",
+      fileSize: 1890000,
+      category: "scorecard",
+      sha256Hash: makeSha256("AAI-ARCHERY-RECURVE-70M-FINALS-2026"),
+      ocrStatus: "EXTRACTED",
+      ocrConfidence: 0.98,
+      uploaderId: stStephens.id,
+      uploaderType: "INSTITUTION",
+      verificationFlag: "VALID",
+      notes: "Official World Archery sanctioned 72-arrow scorecard with AAI verification stamp [DEMO CERTIFICATION].",
+    },
+  });
+
+  // Match 10: Weightlifting Championship
+  const kavitaId = createdAthletesMap.get("SR-IND-26-WLF-54321")!;
+  const matchWeightlifting = await prisma.match.upsert({
+    where: { matchNumber: "SR-M-2026-WLF-801" },
+    update: {
+      instituteId: haryanaInstitute.id,
+      status: "VERIFIED",
+      isCompleted: true,
+    },
+    create: {
+      matchNumber: "SR-M-2026-WLF-801",
+      sport: "Weightlifting",
+      competitionName: "National Junior Weightlifting Championship 2026 - 49kg Finals",
+      instituteId: haryanaInstitute.id,
+      venue: "Khuman Lampak Sports Complex, Imphal",
+      matchDate: new Date("2026-09-24T15:00:00.000Z"),
+      matchFormat: "Olympic Snatch & Clean & Jerk",
+      category: "Women Junior 49kg",
+      refereeDetails: JSON.stringify({
+        refereeName: "Hansa Sharma (IWLF Category-1 Referee)",
+        license: "IWLF-CAT1-7721",
+        remarks: "Eleiko calibrated barbells and plates. 3 White Lights confirmed on all 3 successful lifts.",
+      }),
+      finalScore: "Snatch: 88kg | Clean & Jerk: 115kg | Total: 203kg (Gold)",
+      winner: "Kavita Chanu Devi (Manipur)",
+      resultSummary: "Kavita Chanu lifted an Olympic total of 203kg to win Gold and set a new Junior National record.",
+      status: "VERIFIED",
+      isCompleted: true,
+      reviewedBy: "Chief Integrity Officer Sharma",
+      reviewedAt: new Date("2026-09-24T18:30:00.000Z"),
+    },
+  });
+
+  await prisma.matchParticipant.deleteMany({ where: { matchId: matchWeightlifting.id } });
+  await prisma.matchParticipant.create({
+    data: {
+      matchId: matchWeightlifting.id,
+      athleteId: kavitaId,
+      teamName: "Manipur State Weightlifting Academy",
+      role: "Lifter (Platform 1)",
+      position: 1,
+      placement: "Gold",
+      individualStats: JSON.stringify({
+        bodyWeightKg: 48.7,
+        snatchBestKg: 88,
+        cleanJerkBestKg: 115,
+        olympicTotalKg: 203,
+        sinclairScore: 314.8,
+        finalRank: "1st Place (Gold)",
+      }),
+      performanceRating: 97.0,
+      verifiedStatsSaved: true,
+    },
+  });
+
+  await prisma.matchEvidence.deleteMany({ where: { matchId: matchWeightlifting.id } });
+  await prisma.matchEvidence.create({
+    data: {
+      matchId: matchWeightlifting.id,
+      fileUrl: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80",
+      fileName: "iwlf_weightlifting_official_attempt_card.jpg",
+      fileType: "image/jpeg",
+      fileSize: 1950000,
+      category: "scorecard",
+      sha256Hash: makeSha256("IWLF-WEIGHTLIFTING-49KG-FINALS-IMPHAL-2026"),
+      ocrStatus: "EXTRACTED",
+      ocrConfidence: 0.99,
+      uploaderId: haryanaInstitute.id,
+      uploaderType: "INSTITUTION",
+      verificationFlag: "VALID",
+      notes: "Official IWLF attempt cards and technical controller sign-off sheet with Manipur Sports seal [DEMO CERTIFICATION].",
+    },
+  });
+
   // 5. Trigger Deterministic Rankings Recalculation Across All Sports!
   const sportsToRecalculate = [
     "Athletics",
@@ -1222,6 +1413,8 @@ Tournament was officiated by AIFF Category 1 referees. Complete match events, go
     "Boxing",
     "Wrestling",
     "Cricket",
+    "Archery",
+    "Weightlifting",
   ];
 
   for (const sport of sportsToRecalculate) {
@@ -1229,7 +1422,7 @@ Tournament was officiated by AIFF Category 1 referees. Complete match events, go
     await VerifiedRankingService.recalculateSportRankings(sport);
   }
 
-  console.log("🎉 All 12 athletes, 2 new completed events, scorecards, institutional verification seals, and rankings seeded successfully!");
+  console.log("🎉 All 14 athletes, completed events, scorecards, institutional verification seals, and rankings seeded successfully!");
 }
 
 if (require.main === module) {

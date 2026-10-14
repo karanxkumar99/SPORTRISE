@@ -98,7 +98,15 @@ export const VerifiedRankingService = {
       const raidPoints = Number(stats.raidPoints) || 0;
       const tacklePoints = Number(stats.tacklePoints) || 0;
       const superRaids = Number(stats.superRaids) || 0;
-      score = 45 + raidPoints * 3 + tacklePoints * 4 + superRaids * 6;
+    } else if (s.includes("archer")) {
+      const totalScore = Number(stats.totalScore) || 688;
+      const xRings = Number(stats.xRings) || 0;
+      const accuracyScore = Math.min(((totalScore - 550) / 170) * 35, 35);
+      score = 55 + accuracyScore + Math.min(xRings * 0.5, 10);
+    } else if (s.includes("weightlift")) {
+      const sinclair = Number(stats.sinclairScore) || 314;
+      const sinclairNorm = Math.min(((sinclair - 200) / 130) * 35, 35);
+      score = 55 + sinclairNorm;
     } else {
       // General sport scoring
       const points = Number(stats.points) || Number(stats.score) || 0;

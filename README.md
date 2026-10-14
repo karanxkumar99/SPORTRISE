@@ -244,7 +244,7 @@ Create `backend/.env` with the following variables:
 
 ```env
 PORT=5000
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
 JWT_SECRET="sportrise_production_jwt_super_secret_2026_india"
 
 # Email Delivery (Resend API)
@@ -262,16 +262,34 @@ Create `frontend/.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
+For the Vercel frontend, set `NEXT_PUBLIC_API_URL` in the Vercel project's
+Environment Variables to the publicly deployed backend API base URL, for example:
+
+```env
+NEXT_PUBLIC_API_URL=https://sportrise.onrender.com/api
+```
+
+Redeploy after changing this variable because `NEXT_PUBLIC_` values are embedded
+in the frontend build. The Vercel frontend cannot use a backend running at
+`localhost` on a developer's computer.
+
 ### 3. Database Initialization & Seeding
-The project comes with a pre-seeded SQLite database at `backend/prisma/dev.db`. To generate Prisma client artifacts or re-seed realistic data at any time:
+Configure `DATABASE_URL` with a PostgreSQL connection string for both local development and the Render backend. On Render, use the connection string for the attached PostgreSQL database. With the repository root as the service root, configure the backend build command to create the Prisma client, sync the schema, and compile the API:
 
 ```bash
-# Generate Prisma Client
-npm run prisma:generate --prefix backend
+# Render build command (DATABASE_URL must be configured in the service environment)
+npm install
+npm run prisma:push --workspace=backend
+npm run build:backend
 
-# Seed Realistic Indian Sports Data (15 Athletes, 3 Completed Events, Scorecards)
-npm run seed
+# Render start command
+npm run start --workspace=backend
 ```
+
+`prisma:push` creates or updates the PostgreSQL schema; it does not copy records from
+the old local SQLite database at `backend/prisma/dev.db`. Migrate any local records
+you need to keep, or seed the PostgreSQL database with the appropriate seed scripts.
+Do not set Render's PostgreSQL URL in a schema configured for SQLite (or vice versa).
 
 ### 4. Running the Development Servers
 
