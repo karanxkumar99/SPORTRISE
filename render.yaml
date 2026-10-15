@@ -1,0 +1,35 @@
+# SportRise (खेल उत्थान) Render Blueprint
+# Hosts the Node.js / Express backend with managed PostgreSQL database
+# Target Domain: https://sportrise.onrender.com
+
+services:
+  - type: web
+    name: sportrise-backend
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build:render
+    startCommand: npm run render:start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sportrise-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://sportrise.vercel.app
+      - key: BACKEND_URL
+        value: https://sportrise.onrender.com
+
+databases:
+  - name: sportrise-db
+    plan: free
+    region: singapore
+    databaseName: sportrise
+    user: sportrise_user

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth-context";
 import api from "../../lib/api";
+import { getMediaUrl } from "../../lib/utils";
 import AthleteCard from "../../components/AthleteCard";
 import {
   Trophy,
@@ -812,7 +813,7 @@ export default function DashboardPage() {
                   <div className="w-14 h-14 rounded-full bg-slate-900 border-2 border-orange-500/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {editAvatarUrl ? (
                       <img
-                        src={editAvatarUrl}
+                        src={getMediaUrl(editAvatarUrl)}
                         alt="Avatar Preview"
                         className="w-full h-full object-cover"
                       />

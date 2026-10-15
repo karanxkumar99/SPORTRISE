@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useInstitution } from "../../../../lib/institution-context";
 import api from "../../../../lib/api";
+import { getMediaUrl } from "../../../../lib/utils";
 import { InstitutionSidebar } from "../../../../components/institution/InstitutionSidebar";
 import {
   Trophy,
@@ -881,7 +882,7 @@ export default function CreateMatchPage() {
                       )}
 
                       <a
-                        href={ev.fileUrl}
+                        href={getMediaUrl(ev.fileUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 text-slate-400 hover:text-white"

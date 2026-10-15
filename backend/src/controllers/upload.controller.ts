@@ -49,6 +49,20 @@ const uploadMiddleware = multer({
   },
 });
 
+function getFilePublicUrl(req: Request, filename: string): string {
+  if (process.env.BACKEND_URL) {
+    return `${process.env.BACKEND_URL.replace(/\/$/, "")}/uploads/${filename}`;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return `https://sportrise.onrender.com/uploads/${filename}`;
+  }
+  const host = req.get("host");
+  if (host) {
+    return `${req.protocol}://${host}/uploads/${filename}`;
+  }
+  return `/uploads/${filename}`;
+}
+
 export const UploadController = {
   uploadMiddleware,
 
@@ -59,7 +73,7 @@ export const UploadController = {
       }
 
       const file = req.file;
-      const fileUrl = `/uploads/${file.filename}`;
+      const fileUrl = getFilePublicUrl(req, file.filename);
 
       return res.status(200).json({
         success: true,
@@ -85,7 +99,7 @@ export const UploadController = {
       }
 
       const uploadedFiles = files.map((file) => ({
-        url: `/uploads/${file.filename}`,
+        url: getFilePublicUrl(req, file.filename),
         originalName: file.originalname,
         fileName: file.filename,
         mimeType: file.mimetype,

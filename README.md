@@ -274,22 +274,47 @@ in the frontend build. The Vercel frontend cannot use a backend running at
 `localhost` on a developer's computer.
 
 ### 3. Database Initialization & Seeding
-Configure `DATABASE_URL` with a PostgreSQL connection string for both local development and the Render backend. On Render, use the connection string for the attached PostgreSQL database. With the repository root as the service root, configure the backend build command to create the Prisma client, sync the schema, and compile the API:
+Configure `DATABASE_URL` with a PostgreSQL connection string for both local development and the Render backend. On Render, use the connection string for the attached PostgreSQL database.
+
+If the Render service's **Root Directory** is `backend`, use these commands. Do not
+include `--workspace=backend`; npm only sees the backend package from this directory:
 
 ```bash
-# Render build command (DATABASE_URL must be configured in the service environment)
+# Render build command (DATABASE_URL must point to the attached PostgreSQL database)
 npm install
-npm run prisma:push --workspace=backend
-npm run build:backend
+npm run render:build
 
 # Render start command
-npm run start --workspace=backend
+npm start
 ```
+
+If the service's **Root Directory** is the repository root instead, use
+`npm install` and `npm run render:build --workspace=backend` for the build command,
+and `npm run start --workspace=backend` for the start command.
+
+The `render:build` script refuses to run unless `DATABASE_URL` is a PostgreSQL
+connection string. It runs `prisma db push` before generating the Prisma client and
+compiling the backend, so new schema fields (such as `Match.category`) are present
+before the deployed API starts. Confirm Render's `DATABASE_URL` points to the
+intended database before deploying; back up production data before schema changes.
 
 `prisma:push` creates or updates the PostgreSQL schema; it does not copy records from
 the old local SQLite database at `backend/prisma/dev.db`. Migrate any local records
 you need to keep, or seed the PostgreSQL database with the appropriate seed scripts.
 Do not set Render's PostgreSQL URL in a schema configured for SQLite (or vice versa).
+
+Local and deployed content is stored separately: seeing records in VS Code against
+the local SQLite database does not mean those records exist in Render's PostgreSQL
+database. A successful but empty response from `/api/events/public` or
+`/api/ranking/leaderboard` means the deployed database has no matching published
+events or verified athletes. Import the records you need or intentionally seed the
+Render database; do not run demo seed scripts on production unless their sample
+accounts and records are acceptable there.
+
+If `/api/matches` reports that a column is missing, redeploy with the Render build
+command above and check the build logs for a successful `prisma db push`. A healthy
+`/api/health` response only confirms the API process is running; it does not confirm
+that the deployed database contains local records.
 
 ### 4. Running the Development Servers
 
@@ -304,6 +329,69 @@ npm run dev:frontend
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to experience SportRise.
+
+---
+
+## 🚀 Production Hosting Guide
+
+SportRise is production-ready and pre-configured for hosting on:
+- **Backend API**: [https://sportrise.onrender.com](https://sportrise.onrender.com) (Render Web Service + Render PostgreSQL)
+- **Frontend App**: [https://sportrise.vercel.app](https://sportrise.vercel.app) (Vercel Next.js 14)
+
+### Part A: Deploying Backend to Render (`https://sportrise.onrender.com`)
+
+The repository includes a ready-to-use [`render.yaml`](render.yaml) Blueprint that automates the deployment of the Express backend and managed PostgreSQL database.
+
+#### Option 1: Automatic Deployment via Render Blueprint (Recommended)
+1. In your **Render Dashboard**, click **New +** -> **Blueprint**.
+2. Connect your `sportrise` GitHub repository.
+3. Render automatically detects [`render.yaml`](render.yaml) and provisions:
+   - **PostgreSQL Database** (`sportrise-db` on PostgreSQL 16)
+   - **Node.js Web Service** (`sportrise-backend` at `https://sportrise.onrender.com`)
+4. Click **Apply**. Render will run `npm install && npm run build:render`, push the Prisma schema, and start the API engine.
+
+#### Option 2: Manual Web Service Setup on Render
+If setting up manually without Blueprints:
+1. **Create PostgreSQL Database**:
+   - Name: `sportrise-db`
+   - Plan: Free
+2. **Create Web Service**:
+   - Name: `sportrise-backend` (set custom domain or service name to `sportrise` -> `sportrise.onrender.com`)
+   - Environment: `Node`
+   - Build Command: `npm install && npm run build:render`
+   - Start Command: `npm run render:start`
+   - Health Check Path: `/api/health`
+3. **Set Environment Variables**:
+   - `DATABASE_URL`: *(Select your Render PostgreSQL Internal Connection String)*
+   - `NODE_ENV`: `production`
+   - `PORT`: `10000`
+   - `JWT_SECRET`: *(Generate a secure 32+ character key)*
+   - `CORS_ORIGIN`: `https://sportrise.vercel.app`
+   - `BACKEND_URL`: `https://sportrise.onrender.com`
+4. **Seed Initial Database**:
+   - Once deployed, open Render Shell and run:
+     ```bash
+     npm run seed --workspace=backend
+     ```
+   - This seeds the 4 verified institutions, 15 realistic Indian athletes, and completed tournaments with authenticated scorecards and SHA-256 evidence.
+
+---
+
+### Part B: Deploying Frontend to Vercel (`https://sportrise.vercel.app`)
+
+The repository includes both root [`vercel.json`](vercel.json) and [`frontend/vercel.json`](frontend/vercel.json) ensuring zero-config deployments whether imported as a monorepo root or frontend sub-directory.
+
+1. In your **Vercel Dashboard**, click **Add New...** -> **Project**.
+2. Import your `sportrise` GitHub repository.
+3. Configure the project:
+   - **Framework Preset**: `Next.js`
+   - **Root Directory**: `./` (or `frontend`)
+   - **Build Command**: `npm run build:vercel` *(handled automatically by `vercel.json`)*
+   - **Output Directory**: `frontend/.next` *(handled automatically by `vercel.json`)*
+4. Set **Environment Variables** in Vercel:
+   - `NEXT_PUBLIC_API_URL`: `https://sportrise.onrender.com/api`
+   - `NEXT_PUBLIC_BACKEND_URL`: `https://sportrise.onrender.com`
+5. Click **Deploy**. Vercel will build and publish your frontend to `https://sportrise.vercel.app`.
 
 ---
 

@@ -26,6 +26,7 @@ import {
   AlertCircle,
   FileCheck,
 } from "lucide-react";
+import { getMediaUrl } from "@/lib/utils";
 
 export interface MatchParticipantData {
   id: string;
@@ -450,7 +451,7 @@ export default function EventResultsProofSection({
                         <div
                           onClick={() =>
                             setActiveEvidence({
-                              url: ev.fileUrl,
+                              url: getMediaUrl(ev.fileUrl),
                               title: ev.fileName,
                               category: ev.category,
                               sha256: ev.sha256Hash,
@@ -462,7 +463,7 @@ export default function EventResultsProofSection({
                           className="relative h-44 bg-slate-950 overflow-hidden cursor-pointer flex items-center justify-center"
                         >
                           <img
-                            src={ev.fileUrl}
+                            src={getMediaUrl(ev.fileUrl)}
                             alt={ev.fileName}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -521,7 +522,7 @@ export default function EventResultsProofSection({
                                 </button>
                               )}
                               <a
-                                href={ev.fileUrl}
+                                href={getMediaUrl(ev.fileUrl)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-0.5"

@@ -16,22 +16,113 @@ export async function seedRealisticSportsData() {
   // Default hashed password for demo athletes
   const defaultPassword = await bcrypt.hash("Athlete@2026", 10);
 
-  // 1. Fetch available verified institutions
-  const haryanaInstitute = await prisma.institution.findFirst({
+  // 1. Fetch or create available verified institutions
+  let haryanaInstitute = await prisma.institution.findFirst({
     where: { OR: [{ city: "Rohtak" }, { name: { contains: "Haryana" } }] },
   });
-  const loyolaInstitute = await prisma.institution.findFirst({
+  if (!haryanaInstitute) {
+    haryanaInstitute = await prisma.institution.create({
+      data: {
+        name: "Haryana Sports Academy",
+        type: "Institute",
+        email: "contact@haryanasports.org",
+        password: defaultPassword,
+        contactNumber: "+91 1262 254100",
+        website: "https://haryanasports.gov.in",
+        address: "Tau Devi Lal Sports Complex, Sector 38",
+        city: "Rohtak",
+        state: "Haryana",
+        pincode: "124001",
+        authorizedPersonName: "Col. Baljit Singh",
+        authorizedPersonContact: "+91 98120 48591",
+        description: "Premier state sports academy producing Olympic and Khelo India champions.",
+        coordinatorName: "Coach Rajesh Phogat",
+        coordinatorEmail: "athletics@haryanasports.org",
+        coordinatorPhone: "+91 98120 48591",
+        isVerified: true,
+      },
+    });
+  }
+
+  let loyolaInstitute = await prisma.institution.findFirst({
     where: { OR: [{ city: "Chennai" }, { name: { contains: "Loyola" } }] },
   });
-  const stStephens = await prisma.institution.findFirst({
+  if (!loyolaInstitute) {
+    loyolaInstitute = await prisma.institution.create({
+      data: {
+        name: "Loyola College Chennai",
+        type: "College",
+        email: "sports@loyolacollege.edu",
+        password: defaultPassword,
+        contactNumber: "+91 44 2817 8200",
+        website: "https://loyolacollege.edu",
+        address: "Sterling Road, Nungambakkam",
+        city: "Chennai",
+        state: "Tamil Nadu",
+        pincode: "600034",
+        authorizedPersonName: "Father S. Joseph Raj",
+        authorizedPersonContact: "+91 94441 09823",
+        description: "Historic collegiate sports powerhouse dominating university football, hockey, and track events.",
+        coordinatorName: "Dr. Vijay Anand",
+        coordinatorEmail: "sports@loyolacollege.edu",
+        coordinatorPhone: "+91 94441 56789",
+        isVerified: true,
+      },
+    });
+  }
+
+  let stStephens = await prisma.institution.findFirst({
     where: { OR: [{ city: "New Delhi" }, { name: { contains: "Stephen" } }] },
   });
-  const dpsRkPuram = await prisma.institution.findFirst({
+  if (!stStephens) {
+    stStephens = await prisma.institution.create({
+      data: {
+        name: "St. Stephen's College",
+        type: "College",
+        email: "sportsboard@ststephens.edu",
+        password: defaultPassword,
+        contactNumber: "+91 11 2766 7200",
+        website: "https://ststephens.edu",
+        address: "University Enclave, North Campus",
+        city: "New Delhi",
+        state: "Delhi (NCT)",
+        pincode: "110007",
+        authorizedPersonName: "Prof. John Varghese",
+        authorizedPersonContact: "+91 98100 54321",
+        description: "Premier Delhi University institution pioneering excellence in badminton, archery, and basketball.",
+        coordinatorName: "Prof. Sanjeev Kumar",
+        coordinatorEmail: "sportsboard@ststephens.edu",
+        coordinatorPhone: "+91 98111 65432",
+        isVerified: true,
+      },
+    });
+  }
+
+  let dpsRkPuram = await prisma.institution.findFirst({
     where: { OR: [{ name: { contains: "DPS" } }, { name: { contains: "Delhi Public" } }] },
   });
-
-  if (!haryanaInstitute || !loyolaInstitute || !stStephens) {
-    throw new Error("Required institutions not found in database.");
+  if (!dpsRkPuram) {
+    dpsRkPuram = await prisma.institution.create({
+      data: {
+        name: "Delhi Public School R.K. Puram",
+        type: "School",
+        email: "sports@dpsrkp.net",
+        password: defaultPassword,
+        contactNumber: "+91 11 4911 5500",
+        website: "https://dpsrkp.net",
+        address: "Sector XII, R.K. Puram",
+        city: "New Delhi",
+        state: "Delhi (NCT)",
+        pincode: "110022",
+        authorizedPersonName: "Dr. Padma Srinivasan",
+        authorizedPersonContact: "+91 98110 12345",
+        description: "Premier Indian institution pioneering athletic excellence and national sports tournaments.",
+        coordinatorName: "Coach Rajesh Negi",
+        coordinatorEmail: "rajesh.negi@dpsrkp.net",
+        coordinatorPhone: "+91 98101 23456",
+        isVerified: true,
+      },
+    });
   }
 
   // 2. Define 12 Additional Realistic Indian Athletes

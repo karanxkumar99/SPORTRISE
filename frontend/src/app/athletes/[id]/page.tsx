@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
+import { getMediaUrl } from "@/lib/utils";
 import {
   Trophy,
   Award,
@@ -228,7 +229,7 @@ export default function AthletePublicProfilePage() {
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 p-1 shadow-xl shadow-orange-500/20">
               {athlete.avatarUrl ? (
                 <img
-                  src={athlete.avatarUrl}
+                  src={getMediaUrl(athlete.avatarUrl)}
                   alt={athlete.fullName}
                   className="w-full h-full object-cover rounded-xl"
                 />
@@ -519,7 +520,7 @@ export default function AthletePublicProfilePage() {
                           {match.evidences.map((ev) => (
                             <a
                               key={ev.id}
-                              href={ev.fileUrl}
+                              href={getMediaUrl(ev.fileUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 font-bold transition-colors"

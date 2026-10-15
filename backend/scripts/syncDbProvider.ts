@@ -14,9 +14,19 @@ export function syncDatabaseProvider() {
   }
 
   let schemaContent = fs.readFileSync(schemaPath, "utf-8");
-  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
+  const dbUrl = process.env.DATABASE_URL;
+  if (process.argv.includes("--require-postgres") && !dbUrl) {
+    throw new Error("DATABASE_URL must be set for a Render PostgreSQL deployment.");
+  }
+  if (
+    process.argv.includes("--require-postgres") &&
+    !dbUrl?.startsWith("postgresql://") &&
+    !dbUrl?.startsWith("postgres://")
+  ) {
+    throw new Error("Render deployment requires a PostgreSQL DATABASE_URL.");
+  }
 
-  const isPostgres = dbUrl.startsWith("postgresql://") || dbUrl.startsWith("postgres://");
+  const isPostgres = dbUrl?.startsWith("postgresql://") || dbUrl?.startsWith("postgres://");
   const targetProvider = isPostgres ? "postgresql" : "sqlite";
 
   // Clean up any stale .tmp files in node_modules/.prisma/client

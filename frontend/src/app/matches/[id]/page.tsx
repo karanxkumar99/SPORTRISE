@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import api from "../../../lib/api";
+import { getMediaUrl } from "../../../lib/utils";
 import {
   Trophy,
   Calendar,
@@ -362,7 +363,7 @@ export default function MatchDetailPage() {
                         <ShieldCheck className="w-3.5 h-3.5" /> Integrity Check Passed
                       </span>
                       <a
-                        href={ev.fileUrl}
+                        href={getMediaUrl(ev.fileUrl)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-bold text-orange-400 hover:text-orange-300"

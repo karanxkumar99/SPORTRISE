@@ -4,25 +4,77 @@ import dotenv from "dotenv";
 import path from "path";
 import apiRouter from "./routes";
 
+import fs from "fs";
+
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(
-  cors({
-    origin: true, // Allow frontend origin dynamically
-    credentials: true,
-  })
-);
+// Trust reverse proxy (Render, Vercel, Cloudflare, etc.)
+app.set("trust proxy", 1);
+
+// Allowed origins for CORS (Production Vercel frontend, local dev, custom domains)
+const allowedOrigins = [
+  "https://sportrise.vercel.app",
+  "https://sportrise.onrender.com",
+  "http://localhost:3000",
+  "http://localhost:5000",
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests (mobile apps, server-to-server, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow Vercel preview deployments (*.vercel.app)
+    if (/^https:\/\/.*\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow local development ports
+    if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  exposedHeaders: ["Content-Range", "X-Content-Range"],
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded evidence & media statically
+// Serve uploaded evidence & media statically with Cross-Origin headers
 const uploadsPath = path.join(process.cwd(), "uploads");
-app.use("/uploads", express.static(uploadsPath));
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    next();
+  },
+  express.static(uploadsPath)
+);
 
 // Request logger in dev
 if (process.env.NODE_ENV !== "production") {

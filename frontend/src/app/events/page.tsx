@@ -22,6 +22,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import api from "@/lib/api";
+import { getMediaUrl } from "@/lib/utils";
 
 interface PublicEvent {
   id: string;
@@ -465,7 +466,7 @@ export default function StudentEventsMarketplace() {
                   <div className="relative h-44 overflow-hidden bg-gradient-to-br from-slate-800 via-slate-850 to-slate-950">
                     {evt.bannerImage ? (
                       <img
-                        src={evt.bannerImage}
+                        src={getMediaUrl(evt.bannerImage)}
                         alt={evt.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

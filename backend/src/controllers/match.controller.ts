@@ -299,6 +299,7 @@ export const MatchController = {
         },
       });
     } catch (err: any) {
+      console.error("Get Matches Error:", err);
       return res.status(500).json({ success: false, message: "Failed to fetch matches." });
     }
   },

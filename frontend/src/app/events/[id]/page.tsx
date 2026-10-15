@@ -28,6 +28,7 @@ import {
   Award,
 } from "lucide-react";
 import api from "@/lib/api";
+import { getMediaUrl } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import EventApplicationModal from "@/components/events/EventApplicationModal";
 import EventResultsProofSection, { MatchData } from "@/components/events/EventResultsProofSection";
@@ -308,7 +309,7 @@ function EventDetailContent() {
               <div className="relative h-64 sm:h-80 w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-gradient-to-br from-slate-850 via-slate-900 to-slate-950">
                 {event.bannerImage ? (
                   <img
-                    src={event.bannerImage}
+                    src={getMediaUrl(event.bannerImage)}
                     alt={event.name}
                     className="w-full h-full object-cover"
                   />

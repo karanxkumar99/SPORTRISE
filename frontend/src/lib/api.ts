@@ -1,10 +1,26 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://sportrise.onrender.com/api"
-    : "http://localhost:5000/api");
+function getNormalizedApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!envUrl) {
+    return process.env.NODE_ENV === "production"
+      ? "https://sportrise.onrender.com/api"
+      : "http://localhost:5000/api";
+  }
+
+  // Remove trailing slashes
+  const cleanUrl = envUrl.replace(/\/+$/, "");
+
+  // If already ends in /api, return as is
+  if (cleanUrl.endsWith("/api")) {
+    return cleanUrl;
+  }
+
+  // Otherwise append /api
+  return `${cleanUrl}/api`;
+}
+
+export const API_BASE_URL = getNormalizedApiBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

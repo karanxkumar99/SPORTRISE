@@ -11,14 +11,32 @@ const nextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: "https",
+        hostname: "sportrise.onrender.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.onrender.com",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
     ],
   },
-  // Configure rewrites to backend API during development
+  // Configure rewrites fallback to backend API
   async rewrites() {
+    const backendTarget =
+      process.env.BACKEND_INTERNAL_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "https://sportrise.onrender.com/api/:path*"
+        : "http://localhost:5000/api/:path*");
+
     return [
       {
         source: "/api-proxy/:path*",
-        destination: "http://localhost:5000/api/:path*",
+        destination: backendTarget,
       },
     ];
   },
