@@ -63,6 +63,13 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
   const [submittedAppNumber, setSubmittedAppNumber] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Athlete ID Fast Registration & Lookup State
+  const [athleteId, setAthleteId] = useState("");
+  const [isFetchingAthlete, setIsFetchingAthlete] = useState(false);
+  const [athleteLookupError, setAthleteLookupError] = useState<string | null>(null);
+  const [athleteFound, setAthleteFound] = useState(false);
+  const [sportCategory, setSportCategory] = useState(event.sportGame || event.category || "");
+
   // Form State
   const [applicantName, setApplicantName] = useState("");
   const [dob, setDob] = useState("");
@@ -73,6 +80,7 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
   const [courseDepartment, setCourseDepartment] = useState("");
   const [studentIdCardNumber, setStudentIdCardNumber] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [email, setEmail] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentContact, setParentContact] = useState("");
@@ -92,13 +100,57 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
   // Pre-populate with logged in user data if available
   useEffect(() => {
     if (user) {
+      if (!athleteId && user.athleteId) setAthleteId(user.athleteId);
       if (!applicantName) setApplicantName(user.fullName || "");
       if (!email) setEmail(user.email || "");
-      if (!contactNumber) setContactNumber(user.mobile || "");
+      if (!contactNumber) {
+        setContactNumber(user.mobile || "");
+        setWhatsappNumber(user.mobile || "");
+      }
       if (!gender && user.gender) setGender(user.gender);
       if (isTeamEvent && !captainName) setCaptainName(user.fullName || "");
+      if (!sportCategory && user.sport) setSportCategory(user.sport);
     }
   }, [user, isTeamEvent]);
+
+  // Lookup Athlete by ID
+  const handleLookupAthlete = async () => {
+    if (!athleteId.trim()) {
+      setAthleteLookupError("Please enter your Athlete ID (e.g. SR-IND-26-ATH-10921).");
+      return;
+    }
+
+    setIsFetchingAthlete(true);
+    setAthleteLookupError(null);
+    try {
+      const res = await api.get(`/applications/lookup-athlete/${encodeURIComponent(athleteId.trim())}`);
+      if (res.data?.success && res.data.athlete) {
+        const a = res.data.athlete;
+        setApplicantName(a.applicantName || "");
+        setEmail(a.email || "");
+        setContactNumber(a.contactNumber || "");
+        setWhatsappNumber(a.whatsappNumber || a.contactNumber || "");
+        if (a.gender) setGender(a.gender);
+        if (a.dob) setDob(a.dob);
+        if (a.age) setAge(a.age.toString());
+        if (a.institutionName) setInstitutionName(a.institutionName);
+        if (a.sportCategory) setSportCategory(a.sportCategory);
+        if (a.achievements) setAchievements(a.achievements);
+        setAthleteFound(true);
+      } else {
+        setAthleteLookupError(res.data?.message || "Invalid Athlete ID. Please enter a valid Athlete ID registered on SportRise.");
+        setAthleteFound(false);
+      }
+    } catch (err: any) {
+      setAthleteLookupError(
+        err.response?.data?.message ||
+        `No athlete found with Athlete ID "${athleteId.trim()}". Please verify your Athlete ID or register as an athlete first.`
+      );
+      setAthleteFound(false);
+    } finally {
+      setIsFetchingAthlete(false);
+    }
+  };
 
   // Auto calculate age from dob
   const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,7 +204,9 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
       const payload = {
         eventId: event.id,
         userId: user?.id || null,
+        athleteId: athleteId.trim() || null,
         applicantName,
+        sportCategory: sportCategory || event.sportGame || event.category,
         dob: dob || null,
         age: parseInt(age, 10),
         gender,
@@ -161,6 +215,7 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
         courseDepartment: courseDepartment || null,
         studentIdCardNumber: studentIdCardNumber || null,
         contactNumber,
+        whatsappNumber: whatsappNumber || contactNumber,
         email,
         parentName: parentName || null,
         parentContact: parentContact || null,
@@ -183,9 +238,12 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
       } else {
         setError(res.data?.message || "Failed to submit application.");
       }
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      setError(errorObj.message || "Failed to submit application. Please check your details.");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to submit application. Please check your details."
+      );
     } finally {
       setLoading(false);
     }
@@ -236,11 +294,22 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
-              <h3 className="text-2xl font-black text-white">Application Submitted!</h3>
               
-              {/* Exact Required Success Notification Banner */}
-              <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-lg">
-                Your form has been submitted successfully! We will notify you about your application status and further event updates through WhatsApp and email.
+              {/* Exact Required Success Message */}
+              <h3 className="text-xl sm:text-2xl font-black text-white">
+                Your response has been submitted successfully!
+              </h3>
+              
+              {/* Exact Required Athlete Notification Message */}
+              <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs sm:text-sm font-semibold leading-relaxed shadow-lg text-left space-y-2">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span>Your response has been submitted successfully!</span>
+                </div>
+                <div className="flex items-start gap-2 pt-2 border-t border-emerald-500/20 text-slate-300">
+                  <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+                  <span>We will notify you about important event information through your mobile number and WhatsApp.</span>
+                </div>
               </div>
 
               {/* Unique Application ID Box */}
@@ -291,6 +360,58 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
                   <span>{error}</span>
                 </div>
               )}
+
+              {/* Athlete ID Fast Registration & Auto-fill Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-950 border border-blue-500/30 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                  <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-400" />
+                    Register through Athlete ID (Optional)
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    Retrieves your details and auto-fills the form
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={athleteId}
+                    onChange={(e) => {
+                      setAthleteId(e.target.value);
+                      if (athleteLookupError) setAthleteLookupError(null);
+                    }}
+                    placeholder="e.g. SR-IND-26-ATH-10921"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLookupAthlete}
+                    disabled={isFetchingAthlete || !athleteId.trim()}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {isFetchingAthlete ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      "Fetch Details"
+                    )}
+                  </button>
+                </div>
+                {athleteLookupError && (
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span>{athleteLookupError}</span>
+                  </div>
+                )}
+                {athleteFound && (
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Athlete details retrieved successfully! You can review or complete any missing fields below.</span>
+                  </div>
+                )}
+              </div>
 
               {/* Section 1: Participant Identity */}
               <div>
@@ -436,8 +557,24 @@ export const EventApplicationModal: React.FC<EventApplicationModalProps> = ({
                       type="tel"
                       required
                       value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      placeholder="e.g. XXXXXXXXXX"
+                      onChange={(e) => {
+                        setContactNumber(e.target.value);
+                        if (!whatsappNumber) setWhatsappNumber(e.target.value);
+                      }}
+                      placeholder="e.g. 98XXXXXXXX"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      WhatsApp Number (for event updates)
+                    </label>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder="e.g. 98XXXXXXXX"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500"
                     />
                   </div>

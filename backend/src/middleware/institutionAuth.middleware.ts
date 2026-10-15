@@ -31,6 +31,13 @@ export async function requireInstitutionAuth(
 
     const decoded = jwt.verify(token, secret) as { id: string; email: string; role?: string };
 
+    if (decoded.role !== "institution") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Athlete accounts are not authorized to access Institution endpoints.",
+      });
+    }
+
     const institution = await prisma.institution.findUnique({
       where: { id: decoded.id },
       select: {

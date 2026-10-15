@@ -182,27 +182,21 @@ export const InstitutionController = {
         },
       });
 
-      // Generate secure 6-digit OTP
-      const { plainOtp } = await OTPModel.createOtp({
-        email: normalizedEmail,
-        institutionId: institution.id,
-        userType: "INSTITUTION",
-      });
+      // Issue session token directly without requiring OTP email verification at this stage
+      const secret = process.env.JWT_SECRET || "sportrise_grassroots_sports_secret_token_key_2026";
+      const token = jwt.sign(
+        { id: institution.id, email: institution.email, role: "institution" },
+        secret,
+        { expiresIn: "7d" }
+      );
 
-      // Dispatch real email OTP
-      await mailService.sendOtpEmail({
-        to: normalizedEmail,
-        name: institution.name,
-        otp: plainOtp,
-        type: "INSTITUTION",
-      });
+      const { password: pwd, ...safeData } = institution;
 
       return res.status(201).json({
         success: true,
-        message: "Institution registered! We sent a 6-digit verification code to your email address.",
-        email: institution.email,
-        institutionId: institution.id,
-        requiresVerification: true,
+        message: "Institution registered successfully! Welcome to SportRise Event Portal.",
+        token,
+        institution: safeData,
       });
     } catch (err: any) {
       console.error("Institution Register Error:", err);
@@ -382,33 +376,7 @@ export const InstitutionController = {
         });
       }
 
-      // Check verification status
-      if (!institution.isVerified) {
-        try {
-          const { plainOtp } = await OTPModel.createOtp({
-            email: institution.email,
-            institutionId: institution.id,
-            userType: "INSTITUTION",
-          });
-
-          await mailService.sendOtpEmail({
-            to: institution.email,
-            name: institution.name,
-            otp: plainOtp,
-            type: "INSTITUTION",
-          });
-        } catch {
-          // Cooldown active, existing code is valid
-        }
-
-        return res.status(403).json({
-          success: false,
-          requiresVerification: true,
-          email: institution.email,
-          institutionName: institution.name,
-          message: "Your institution account requires email verification. A fresh 6-digit verification code has been sent to your email address.",
-        });
-      }
+      // Institutions log in directly without requiring email OTP verification at this stage
 
       const secret = process.env.JWT_SECRET || "sportrise_grassroots_sports_secret_token_key_2026";
       const token = jwt.sign(

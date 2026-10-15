@@ -22,6 +22,8 @@ import {
   ExternalLink,
   UploadCloud,
   Trophy,
+  Mail,
+  X,
 } from "lucide-react";
 
 interface DashboardStats {
@@ -51,6 +53,7 @@ export default function InstitutionDashboardPage() {
   const [recentApplications, setRecentApplications] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !institution) {
@@ -99,7 +102,6 @@ export default function InstitutionDashboardPage() {
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl">
         {/* Top Header Banner */}
-        {/* Top Header Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl backdrop-blur">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -112,13 +114,14 @@ export default function InstitutionDashboardPage() {
                   Verified Institution
                 </span>
               ) : (
-                <Link
-                  href={`/institution/verify-otp?email=${encodeURIComponent(institution.email)}`}
-                  className="flex items-center gap-1 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all"
+                <button
+                  type="button"
+                  onClick={() => setShowVerifyModal(true)}
+                  className="flex items-center gap-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-bold transition-all shadow-sm"
                 >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Email Unverified • Click to Verify
-                </Link>
+                  <Mail className="w-3.5 h-3.5" />
+                  Verify Your Email
+                </button>
               )}
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -152,27 +155,66 @@ export default function InstitutionDashboardPage() {
           </div>
         </div>
 
-        {/* Unverified Institution Warning Banner */}
-        {!institution.isVerified && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start sm:items-center gap-3">
-              <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl flex-shrink-0">
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white">Email Verification Pending for {institution.name}</h4>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Your registered email ({institution.email}) requires OTP confirmation to unlock publishing official tournaments, verifying matches, and issuing athlete awards.
-                </p>
-              </div>
+        {/* Verify Your Email Banner */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-blue-500/20 text-blue-400 rounded-xl flex-shrink-0 border border-blue-500/30">
+              <Mail className="w-5 h-5" />
             </div>
-            <Link
-              href={`/institution/verify-otp?email=${encodeURIComponent(institution.email)}`}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto flex-shrink-0"
-            >
-              Verify Email Now
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div>
+              <h4 className="text-sm font-bold text-white">Institution Email: {institution.email}</h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Check and manage email verification status for your registered institution account.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowVerifyModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto flex-shrink-0"
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Verify Your Email
+          </button>
+        </div>
+
+        {/* Verify Email Modal with Exact Message */}
+        {showVerifyModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+              <button
+                type="button"
+                onClick={() => setShowVerifyModal(false)}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <Mail className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-black text-white">Email Verification</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {institution.email}
+              </p>
+
+              {/* Exact Required Message */}
+              <div className="my-5 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-200 text-sm font-semibold shadow">
+                Email verification will be available soon.
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed mb-6">
+                Your institution profile for <span className="text-white font-bold">{institution.name}</span> currently has full administrative access to host events, manage registrations, and submit match scorecards.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowVerifyModal(false)}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
 

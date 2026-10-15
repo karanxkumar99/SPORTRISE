@@ -293,7 +293,9 @@ model Application {
   event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   userId              String?
   user                User?    @relation(fields: [userId], references: [id])
+  athleteId           String?
   applicantName       String
+  sportCategory       String?
   dob                 DateTime?
   age                 Int
   gender              String
@@ -302,6 +304,7 @@ model Application {
   courseDepartment    String?
   studentIdCardNumber String?
   contactNumber       String
+  whatsappNumber      String?
   email               String
   parentName          String?
   parentContact       String?

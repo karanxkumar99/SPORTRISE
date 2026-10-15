@@ -547,12 +547,187 @@ Tournament was officiated by AIFF Category 1 referees. Complete match events, go
     },
   });
 
+  // 3b. Create 2 Realistic Sample ONGOING Events (spanning current date)
+  // Ongoing Event 1: Khelo India National Collegiate Football Championship 2026
+  const evtOngoingFootball = await prisma.event.upsert({
+    where: { id: "evt-ongoing-khelo-india-football-2026" },
+    update: {
+      status: "Published",
+      startDate: new Date("2026-10-10T08:00:00.000Z"),
+      endDate: new Date("2026-10-25T18:00:00.000Z"),
+      regEndDate: new Date("2026-10-20T23:59:59.000Z"),
+    },
+    create: {
+      id: "evt-ongoing-khelo-india-football-2026",
+      institutionId: haryanaInstitute.id,
+      name: "Khelo India National Collegiate Football Championship 2026",
+      category: "Football",
+      sportGame: "11-a-side Football League",
+      bannerImage: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80",
+      shortDescription: "Nationwide collegiate football championship featuring premier university teams across Indian states competing in knockout and league formats.",
+      fullDescription: `The Khelo India National Collegiate Football Championship 2026 is currently underway across Haryana Sports Academy and Gurugram Sports Arenas. Certified AIFF match referees, official digital ball tracking, and verified real-time scores updated daily.`,
+      organizer: "Ministry of Youth Affairs & Haryana Sports Academy",
+      hostingInstitution: haryanaInstitute.name,
+      contactPerson: "Col. Baljit Singh",
+      contactEmail: "athletics@haryanasports.org",
+      contactPhone: "9812048591",
+      regStartDate: new Date("2026-09-15T00:00:00.000Z"),
+      regEndDate: new Date("2026-10-20T23:59:59.000Z"),
+      startDate: new Date("2026-10-10T08:00:00.000Z"),
+      endDate: new Date("2026-10-25T18:00:00.000Z"),
+      reportingTime: "07:30 AM",
+      startTime: "08:30 AM",
+      venueName: "Tau Devi Lal Football Arena",
+      venueAddress: "Sector 38, Sports Enclave",
+      city: "Gurugram",
+      state: "Haryana",
+      isPaid: false,
+      registrationFee: 0,
+      visibility: "Public",
+      status: "Published",
+      rounds: JSON.stringify([
+        { name: "Group Stage Day 1", date: "2026-10-10", status: "Completed" },
+        { name: "Quarterfinals", date: "2026-10-16", status: "Ongoing" },
+        { name: "Grand Finals", date: "2026-10-25", status: "Upcoming" },
+      ]),
+    },
+  });
+
+  // Ongoing Event 2: All-India Inter-State Aquatic & Swimming Championship 2026
+  const evtOngoingAquatics = await prisma.event.upsert({
+    where: { id: "evt-ongoing-aquatic-swimming-2026" },
+    update: {
+      status: "Published",
+      startDate: new Date("2026-10-12T07:00:00.000Z"),
+      endDate: new Date("2026-10-22T19:00:00.000Z"),
+      regEndDate: new Date("2026-10-18T23:59:59.000Z"),
+    },
+    create: {
+      id: "evt-ongoing-aquatic-swimming-2026",
+      institutionId: stStephens.id,
+      name: "All-India Inter-State Aquatic & Swimming Championship 2026",
+      category: "Athletics",
+      sportGame: "Aquatics & Competitive Swimming (50m, 100m, 200m)",
+      bannerImage: "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=1200&q=80",
+      shortDescription: "Premier aquatic championship bringing together collegiate swimmers from across Indian universities with electronic touchpads and SFI certified judges.",
+      fullDescription: `Sanctioned by Swimming Federation of India (SFI) and hosted by St. Stephen's College at SPM Swimming Complex. Fully electronic timing, international lane lines, and instant verified leaderboard publishing.`,
+      organizer: "Delhi University Sports Council & St. Stephen's Sports Board",
+      hostingInstitution: stStephens.name,
+      contactPerson: "Prof. Sanjeev Kumar",
+      contactEmail: "sportsboard@ststephens.edu",
+      contactPhone: "9811165432",
+      regStartDate: new Date("2026-09-20T00:00:00.000Z"),
+      regEndDate: new Date("2026-10-18T23:59:59.000Z"),
+      startDate: new Date("2026-10-12T07:00:00.000Z"),
+      endDate: new Date("2026-10-22T19:00:00.000Z"),
+      reportingTime: "06:30 AM",
+      startTime: "07:30 AM",
+      venueName: "Dr. SPM Swimming Pool Complex",
+      venueAddress: "Central Ridge, Talkatora Garden",
+      city: "New Delhi",
+      state: "Delhi (NCT)",
+      isPaid: false,
+      registrationFee: 0,
+      visibility: "Public",
+      status: "Published",
+      rounds: JSON.stringify([
+        { name: "Preliminary Heats", date: "2026-10-12", status: "Completed" },
+        { name: "Semifinal Rounds", date: "2026-10-16", status: "Ongoing" },
+        { name: "Podium Finals", date: "2026-10-22", status: "Upcoming" },
+      ]),
+    },
+  });
+
+  // Seed sample athlete registrations for the ongoing events
+  const sampleRegistrations = [
+    {
+      applicationNumber: "APP-EVT-26-10492",
+      eventId: evtOngoingFootball.id,
+      athleteId: "SR-IND-26-ATH-10921",
+      userId: createdAthletesMap.get("SR-IND-26-ATH-10921") || null,
+      applicantName: "Aarav Singhania",
+      sportCategory: "Football",
+      age: 19,
+      gender: "Male",
+      institutionName: "Haryana Sports Academy",
+      classOrYear: "2nd Year B.P.Ed",
+      contactNumber: "9810234561",
+      whatsappNumber: "9810234561",
+      email: "aarav.singhania@sportrise.demo",
+      status: "Approved",
+    },
+    {
+      applicationNumber: "APP-EVT-26-21804",
+      eventId: evtOngoingFootball.id,
+      athleteId: "SR-IND-26-FTB-61029",
+      userId: createdAthletesMap.get("SR-IND-26-FTB-61029") || null,
+      applicantName: "Vikramaditya Rathore",
+      sportCategory: "Football",
+      age: 21,
+      gender: "Male",
+      institutionName: "Delhi University Football Club",
+      classOrYear: "Final Year B.A.",
+      contactNumber: "9811883322",
+      whatsappNumber: "9811883322",
+      email: "vikram.rathore@sportrise.demo",
+      status: "Approved",
+    },
+    {
+      applicationNumber: "APP-EVT-26-34910",
+      eventId: evtOngoingAquatics.id,
+      athleteId: "SR-IND-26-ATH-20481",
+      userId: createdAthletesMap.get("SR-IND-26-ATH-20481") || null,
+      applicantName: "Priya Nair",
+      sportCategory: "Swimming",
+      age: 19,
+      gender: "Female",
+      institutionName: "Ernakulam Aquatic Club",
+      classOrYear: "1st Year B.Sc",
+      contactNumber: "9845123490",
+      whatsappNumber: "9845123490",
+      email: "priya.nair@sportrise.demo",
+      status: "Submitted",
+    },
+    {
+      applicationNumber: "APP-EVT-26-45190",
+      eventId: evtOngoingAquatics.id,
+      athleteId: "SR-IND-26-ATH-39102",
+      userId: createdAthletesMap.get("SR-IND-26-ATH-39102") || null,
+      applicantName: "Rohan Deshmukh",
+      sportCategory: "Swimming",
+      age: 21,
+      gender: "Male",
+      institutionName: "Balewadi High Performance Centre",
+      classOrYear: "3rd Year B.Com",
+      contactNumber: "9820341122",
+      whatsappNumber: "9820341122",
+      email: "rohan.deshmukh@sportrise.demo",
+      status: "Approved",
+    },
+  ];
+
+  for (const reg of sampleRegistrations) {
+    await prisma.application.upsert({
+      where: { applicationNumber: reg.applicationNumber },
+      update: {
+        eventId: reg.eventId,
+        athleteId: reg.athleteId,
+        applicantName: reg.applicantName,
+        sportCategory: reg.sportCategory,
+        contactNumber: reg.contactNumber,
+        whatsappNumber: reg.whatsappNumber,
+        status: reg.status,
+      },
+      create: reg,
+    });
+  }
+
   // Also ensure existing Badminton completed event has completed dates:
   const evtBadminton = await prisma.event.findFirst({
     where: { OR: [{ id: "20732e82-6dd0-4fd8-a570-5864ff2322f0" }, { name: { contains: "Badminton" } }] },
   });
 
-  console.log(`✅ Completed events validated in database.`);
+  console.log(`✅ Completed and Ongoing sample events validated in database.`);
 
   // 4. Create Official Matches, Scorecards, Evidence, and Participants
   const now = new Date();

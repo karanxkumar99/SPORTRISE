@@ -6,6 +6,7 @@ const router = Router();
 
 // Student routes
 router.post("/apply", ApplicationController.apply);
+router.get("/lookup-athlete/:athleteId", ApplicationController.lookupAthlete);
 router.get("/my-applications", ApplicationController.getMyApplications);
 
 // Institution routes

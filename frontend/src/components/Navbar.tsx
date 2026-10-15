@@ -23,7 +23,7 @@ import {
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { institution } = useInstitution();
+  const { institution, logout: institutionLogout } = useInstitution();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -97,27 +97,7 @@ export const Navbar: React.FC = () => {
 
           {/* Auth CTA & Institution Button */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Institution Portal Link */}
-            {institution ? (
-              <Link
-                href="/institution/dashboard"
-                prefetch={true}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 text-xs font-bold transition-all shadow-sm"
-              >
-                <School className="w-3.5 h-3.5 text-blue-400" />
-                <span className="truncate max-w-[120px]">{institution.name}</span>
-              </Link>
-            ) : (
-              <Link
-                href="/institution/login"
-                prefetch={true}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-all"
-              >
-                <School className="w-3.5 h-3.5 text-blue-400" />
-                <span>Institution Portal</span>
-              </Link>
-            )}
-
+            {/* If Athlete is logged in: show Athlete Profile only, hide Institution login completely */}
             {user ? (
               <div className="flex items-center gap-3">
                 <Link
@@ -145,22 +125,52 @@ export const Navbar: React.FC = () => {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
+            ) : institution ? (
+              /* If Institution is logged in: show Institution Dashboard, hide Athlete login/register */
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/institution/dashboard"
+                  prefetch={true}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 text-xs font-bold transition-all shadow-sm"
+                >
+                  <School className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="truncate max-w-[140px]">{institution.name}</span>
+                </Link>
+                <button
+                  onClick={institutionLogout}
+                  title="Sign out Institution"
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-900 rounded-xl transition-colors border border-transparent hover:border-slate-800"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
-              <div className="flex items-center gap-2">
+              /* Public / Logged Out: Show both options */
+              <div className="flex items-center gap-3">
                 <Link
-                  href="/login"
+                  href="/institution/login"
                   prefetch={true}
-                  className="px-4 py-2 text-sm font-bold text-slate-200 hover:text-white rounded-xl hover:bg-slate-900 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-all"
                 >
-                  Log In
+                  <School className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Institution Portal</span>
                 </Link>
-                <Link
-                  href="/register"
-                  prefetch={true}
-                  className="px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 rounded-xl shadow-lg shadow-orange-500/25 transition-all hover:scale-105"
-                >
-                  Register Athlete
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    prefetch={true}
+                    className="px-4 py-2 text-sm font-bold text-slate-200 hover:text-white rounded-xl hover:bg-slate-900 transition-colors"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/register"
+                    prefetch={true}
+                    className="px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 rounded-xl shadow-lg shadow-orange-500/25 transition-all hover:scale-105"
+                  >
+                    Register Athlete
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -200,17 +210,19 @@ export const Navbar: React.FC = () => {
             );
           })}
 
-          {/* Mobile Institution Portal Link */}
-          <div className="pt-2">
-            <Link
-              href={institution ? "/institution/dashboard" : "/institution/login"}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-base font-semibold bg-blue-600/10 text-blue-300 border border-blue-500/20"
-            >
-              <School className="w-5 h-5 text-blue-400" />
-              <span>{institution ? `Portal: ${institution.name}` : "Institution Portal"}</span>
-            </Link>
-          </div>
+          {/* Mobile Institution Link: Only shown if NOT logged in as an Athlete */}
+          {!user && (
+            <div className="pt-2">
+              <Link
+                href={institution ? "/institution/dashboard" : "/institution/login"}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-base font-semibold bg-blue-600/10 text-blue-300 border border-blue-500/20"
+              >
+                <School className="w-5 h-5 text-blue-400" />
+                <span>{institution ? `Portal: ${institution.name}` : "Institution Portal"}</span>
+              </Link>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-slate-850 flex flex-col gap-2">
             {user ? (
@@ -236,6 +248,23 @@ export const Navbar: React.FC = () => {
                 >
                   <LogOut className="w-4 h-4" />
                   Log Out
+                </button>
+              </div>
+            ) : institution ? (
+              <div className="space-y-2">
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <p className="font-bold text-white">{institution.name}</p>
+                  <p className="text-xs text-blue-400">{institution.type} • {institution.city}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    institutionLogout();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out Institution
                 </button>
               </div>
             ) : (

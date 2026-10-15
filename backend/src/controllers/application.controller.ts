@@ -12,6 +12,7 @@ export const ApplicationController = {
       const {
         eventId,
         userId,
+        athleteId,
         applicantName,
         dob,
         age,
@@ -21,7 +22,9 @@ export const ApplicationController = {
         courseDepartment,
         studentIdCardNumber,
         contactNumber,
+        whatsappNumber,
         email,
+        sportCategory,
         parentName,
         parentContact,
         emergencyContact,
@@ -59,18 +62,60 @@ export const ApplicationController = {
         });
       }
 
-      // Check if already applied
+      // Validate Athlete ID if provided
+      let resolvedAthleteId: string | null = null;
+      let resolvedUserId: string | null = userId || null;
+
+      if (athleteId && typeof athleteId === "string" && athleteId.trim()) {
+        const cleanAthleteId = athleteId.trim();
+        const matchedAthlete = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { athleteId: { equals: cleanAthleteId } },
+              { athleteId: { equals: cleanAthleteId.toUpperCase() } },
+            ],
+          },
+        });
+
+        if (!matchedAthlete) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid Athlete ID "${cleanAthleteId}". Please enter a valid Athlete ID registered on SportRise.`,
+          });
+        }
+
+        resolvedAthleteId = matchedAthlete.athleteId;
+        resolvedUserId = matchedAthlete.id;
+      } else if (userId) {
+        const userRecord = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { athleteId: true },
+        });
+        if (userRecord?.athleteId) {
+          resolvedAthleteId = userRecord.athleteId;
+        }
+      }
+
+      // Duplicate registration prevention check
+      const duplicateConditions: any[] = [{ email: email.trim().toLowerCase() }];
+      if (resolvedAthleteId) {
+        duplicateConditions.push({ athleteId: resolvedAthleteId });
+      }
+      if (resolvedUserId) {
+        duplicateConditions.push({ userId: resolvedUserId });
+      }
+
       const existing = await prisma.application.findFirst({
         where: {
           eventId,
-          email: email.trim().toLowerCase(),
+          OR: duplicateConditions,
         },
       });
 
       if (existing) {
         return res.status(409).json({
           success: false,
-          message: `You have already applied for this event (Application ID: ${existing.applicationNumber}).`,
+          message: `You have already registered for this event (Application ID: ${existing.applicationNumber}). Duplicate registrations for the same event are not permitted.`,
           applicationNumber: existing.applicationNumber,
         });
       }
@@ -83,8 +128,10 @@ export const ApplicationController = {
         data: {
           applicationNumber,
           eventId,
-          userId: userId || null,
+          userId: resolvedUserId,
+          athleteId: resolvedAthleteId,
           applicantName: applicantName.trim(),
+          sportCategory: sportCategory?.trim() || event.sportGame || event.category,
           dob: dob ? new Date(dob) : null,
           age: parseInt(age, 10),
           gender,
@@ -93,6 +140,7 @@ export const ApplicationController = {
           courseDepartment: courseDepartment?.trim() || null,
           studentIdCardNumber: studentIdCardNumber?.trim() || null,
           contactNumber: contactNumber.trim(),
+          whatsappNumber: whatsappNumber?.trim() || contactNumber.trim(),
           email: email.trim().toLowerCase(),
           parentName: parentName?.trim() || null,
           parentContact: parentContact?.trim() || null,
@@ -114,17 +162,17 @@ export const ApplicationController = {
         data: {
           institutionId: event.institutionId,
           title: "New Student Application",
-          message: `${applicantName} (${institutionName}) applied for "${event.name}". Application ID: ${applicationNumber}.`,
+          message: `${applicantName} (${institutionName}) registered for "${event.name}". Application ID: ${applicationNumber}.`,
           link: `/institution/applications`,
           type: "info",
         },
       });
 
       // Notify student if user ID is present
-      if (userId) {
+      if (resolvedUserId) {
         await prisma.notification.create({
           data: {
-            userId,
+            userId: resolvedUserId,
             title: "Application Submitted Successfully",
             message: `Your registration for "${event.name}" is submitted. Keep Application #${applicationNumber} for reference.`,
             link: `/dashboard/applications`,
@@ -135,13 +183,95 @@ export const ApplicationController = {
 
       return res.status(201).json({
         success: true,
-        message: "Application submitted successfully!",
+        message: "Your response has been submitted successfully!",
+        notificationMessage: "We will notify you about important event information through your mobile number and WhatsApp.",
         applicationNumber,
         application,
       });
     } catch (err) {
       console.error("Apply Error:", err);
       return res.status(500).json({ success: false, message: "Application submission failed." });
+    }
+  },
+
+  /**
+   * Lookup Athlete Details by Athlete ID
+   */
+  async lookupAthlete(req: Request, res: Response) {
+    try {
+      const { athleteId } = req.params;
+      if (!athleteId || typeof athleteId !== "string" || !athleteId.trim()) {
+        return res.status(400).json({ success: false, message: "Athlete ID is required." });
+      }
+
+      const trimmedId = athleteId.trim();
+      const athlete = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { athleteId: { equals: trimmedId } },
+            { athleteId: { equals: trimmedId.toUpperCase() } },
+          ],
+        },
+        select: {
+          id: true,
+          athleteId: true,
+          fullName: true,
+          mobile: true,
+          email: true,
+          gender: true,
+          dob: true,
+          ageCategory: true,
+          sport: true,
+          state: true,
+          district: true,
+          achievements: true,
+        },
+      });
+
+      if (!athlete) {
+        return res.status(404).json({
+          success: false,
+          message: `No athlete found with Athlete ID "${trimmedId}". Please verify your Athlete ID or register as an athlete first.`,
+        });
+      }
+
+      // Calculate age from dob or ageCategory
+      let calculatedAge = 18;
+      if (athlete.dob) {
+        const birth = new Date(athlete.dob);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+          calculatedAge--;
+        }
+      } else if (athlete.ageCategory) {
+        const parsed = parseInt(athlete.ageCategory.replace(/\D/g, ""), 10);
+        if (!isNaN(parsed) && parsed >= 5 && parsed <= 60) calculatedAge = parsed;
+      }
+
+      return res.status(200).json({
+        success: true,
+        athlete: {
+          userId: athlete.id,
+          athleteId: athlete.athleteId,
+          applicantName: athlete.fullName,
+          email: athlete.email,
+          contactNumber: athlete.mobile,
+          whatsappNumber: athlete.mobile,
+          gender: athlete.gender || "Male",
+          dob: athlete.dob ? athlete.dob.toISOString().split("T")[0] : null,
+          age: calculatedAge,
+          sportCategory: athlete.sport,
+          state: athlete.state,
+          district: athlete.district,
+          institutionName: `${athlete.district} District Sports Academy`,
+          achievements: athlete.achievements || "",
+        },
+      });
+    } catch (err) {
+      console.error("Lookup Athlete Error:", err);
+      return res.status(500).json({ success: false, message: "Failed to look up athlete details." });
     }
   },
 
@@ -200,7 +330,7 @@ export const ApplicationController = {
         return res.status(401).json({ success: false, message: "Unauthorized." });
       }
 
-      const { eventId, status, search } = req.query;
+      const { eventId, status, search, sortBy = "createdAt", sortOrder = "desc" } = req.query;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: any = {
@@ -222,32 +352,87 @@ export const ApplicationController = {
         where.OR = [
           { applicantName: { contains: q } },
           { applicationNumber: { contains: q } },
+          { athleteId: { contains: q } },
           { email: { contains: q } },
           { institutionName: { contains: q } },
           { contactNumber: { contains: q } },
+          { whatsappNumber: { contains: q } },
+          { sportCategory: { contains: q } },
         ];
       }
 
-      const applications = await prisma.application.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: {
-          event: {
-            select: {
-              id: true,
-              name: true,
-              sportGame: true,
-              category: true,
-              startDate: true,
+      const orderBy: any = {};
+      const validSort = ["createdAt", "applicantName", "athleteId", "status"];
+      const chosenSort = validSort.includes(sortBy as string) ? (sortBy as string) : "createdAt";
+      orderBy[chosenSort] = sortOrder === "asc" ? "asc" : "desc";
+
+      const [applications, institutionEvents] = await Promise.all([
+        prisma.application.findMany({
+          where,
+          orderBy,
+          include: {
+            event: {
+              select: {
+                id: true,
+                name: true,
+                sportGame: true,
+                category: true,
+                startDate: true,
+                status: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                athleteId: true,
+                fullName: true,
+                mobile: true,
+                email: true,
+                sport: true,
+              },
             },
           },
-        },
-      });
+        }),
+        prisma.event.findMany({
+          where: { institutionId: req.institution.id },
+          select: {
+            id: true,
+            name: true,
+            sportGame: true,
+            status: true,
+            startDate: true,
+            _count: {
+              select: { applications: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+
+      const eventSummaries = institutionEvents.map((evt) => ({
+        id: evt.id,
+        name: evt.name,
+        sportGame: evt.sportGame,
+        status: evt.status,
+        startDate: evt.startDate,
+        registeredCount: evt._count.applications,
+      }));
+
+      const totalRegistrations = institutionEvents.reduce((acc, evt) => acc + evt._count.applications, 0);
+
+      const formatted = applications.map((app) => ({
+        ...app,
+        athleteId: app.athleteId || app.user?.athleteId || null,
+        whatsappNumber: app.whatsappNumber || app.contactNumber || null,
+        sportCategory: app.sportCategory || app.event.sportGame || app.event.category,
+      }));
 
       return res.status(200).json({
         success: true,
-        count: applications.length,
-        applications,
+        count: formatted.length,
+        totalRegistrations,
+        eventSummaries,
+        applications: formatted,
       });
     } catch (err) {
       console.error("Institution Applications Error:", err);

@@ -21,6 +21,8 @@ import {
   Calendar,
   ShieldCheck,
   Check,
+  RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useInstitution } from "@/lib/institution-context";
@@ -34,11 +36,23 @@ interface TeamMember {
   roleOrPosition?: string;
 }
 
+interface EventSummary {
+  id: string;
+  name: string;
+  sportGame: string;
+  status: string;
+  startDate: string;
+  registeredCount: number;
+}
+
 interface ApplicationData {
   id: string;
   applicationNumber: string;
   eventId: string;
+  userId?: string | null;
+  athleteId?: string | null;
   applicantName: string;
+  sportCategory?: string | null;
   dob?: string | null;
   age: number;
   gender: string;
@@ -47,6 +61,7 @@ interface ApplicationData {
   courseDepartment?: string | null;
   studentIdCardNumber?: string | null;
   contactNumber: string;
+  whatsappNumber?: string | null;
   email: string;
   parentName?: string | null;
   parentContact?: string | null;
@@ -67,6 +82,7 @@ interface ApplicationData {
     sportGame: string;
     category: string;
     startDate: string;
+    status?: string;
   };
 }
 
@@ -76,10 +92,14 @@ function InstitutionApplicationsContent() {
   const urlEventId = searchParams.get("eventId") || "All";
 
   const [applications, setApplications] = useState<ApplicationData[]>([]);
+  const [eventSummaries, setEventSummaries] = useState<EventSummary[]>([]);
+  const [totalRegistrations, setTotalRegistrations] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState(urlEventId);
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Selected for inspection modal
   const [selectedApp, setSelectedApp] = useState<ApplicationData | null>(null);
@@ -91,7 +111,7 @@ function InstitutionApplicationsContent() {
     if (institution) {
       fetchApplications();
     }
-  }, [institution, selectedEventId, statusFilter]);
+  }, [institution, selectedEventId, statusFilter, sortBy, sortOrder]);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -99,10 +119,14 @@ function InstitutionApplicationsContent() {
       const params: Record<string, string> = {};
       if (selectedEventId !== "All") params.eventId = selectedEventId;
       if (statusFilter !== "All") params.status = statusFilter;
+      if (sortBy) params.sortBy = sortBy;
+      if (sortOrder) params.sortOrder = sortOrder;
 
       const res = await api.get(`/applications/institution-list`, { params });
       if (res.data?.success) {
         setApplications(res.data.applications || []);
+        setEventSummaries(res.data.eventSummaries || []);
+        setTotalRegistrations(res.data.totalRegistrations || 0);
       }
     } catch (err) {
       console.error("Failed to fetch applications:", err);
@@ -145,38 +169,40 @@ function InstitutionApplicationsContent() {
   const exportCSV = () => {
     if (applications.length === 0) return;
     const headers = [
-      "Application ID",
+      "Athlete ID",
+      "Athlete Name",
+      "Sport/Category",
       "Event Name",
-      "Participant Name",
       "Age",
       "Gender",
       "Institution",
-      "Class/Year",
-      "Phone",
+      "Mobile Number",
+      "WhatsApp Number",
       "Email",
       "Status",
-      "Team Name",
+      "Registration Date & Time",
     ];
 
     const rows = applications.map((a) => [
-      a.applicationNumber,
-      `"${a.event.name}"`,
+      `"${a.athleteId || a.applicationNumber}"`,
       `"${a.applicantName}"`,
+      `"${a.sportCategory || a.event.sportGame || a.event.category}"`,
+      `"${a.event.name}"`,
       a.age,
       a.gender,
       `"${a.institutionName}"`,
-      `"${a.classOrYear}"`,
-      a.contactNumber,
+      `"${a.contactNumber}"`,
+      `"${a.whatsappNumber || a.contactNumber}"`,
       a.email,
       a.status,
-      a.isTeam ? `"${a.teamName || ""}"` : "Individual",
+      `"${new Date(a.createdAt).toLocaleString("en-IN")}"`,
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `sportrise-applications-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `sportrise-event-registrations-${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -186,12 +212,15 @@ function InstitutionApplicationsContent() {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
+      (a.athleteId && a.athleteId.toLowerCase().includes(q)) ||
       a.applicationNumber.toLowerCase().includes(q) ||
       a.applicantName.toLowerCase().includes(q) ||
+      a.contactNumber.includes(q) ||
+      (a.whatsappNumber && a.whatsappNumber.includes(q)) ||
       a.email.toLowerCase().includes(q) ||
+      (a.sportCategory && a.sportCategory.toLowerCase().includes(q)) ||
       a.institutionName.toLowerCase().includes(q) ||
-      a.event.name.toLowerCase().includes(q) ||
-      (a.teamName && a.teamName.toLowerCase().includes(q))
+      a.event.name.toLowerCase().includes(q)
     );
   });
 
@@ -203,30 +232,59 @@ function InstitutionApplicationsContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white">Student Applications</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Event Registration Management</h1>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                {totalRegistrations} Total Registered
+              </span>
+            </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Review candidate rosters, verify eligibility, and approve or waitlist participants.
+              Real-time roster of registered athletes across your hosted events. View details, sort, and manage participant statuses.
             </p>
           </div>
 
-          <button
-            onClick={exportCSV}
-            disabled={applications.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/80 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors disabled:opacity-40"
-          >
-            <Download className="w-4 h-4 text-orange-400" />
-            Export CSV Roster
-          </button>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={() => fetchApplications()}
+              disabled={loading}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/80 text-slate-300 hover:text-white font-bold text-xs sm:text-sm transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 text-blue-400 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            <button
+              onClick={exportCSV}
+              disabled={applications.length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-700/80 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors disabled:opacity-40"
+            >
+              <Download className="w-4 h-4 text-orange-400" />
+              Export CSV Roster
+            </button>
+          </div>
         </div>
 
-        {/* Filters and Search Bar */}
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+        {/* Filters, Event Selector & Search Bar */}
+        <div className="mt-6 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Event Selector with Registration Counts */}
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500 max-w-[280px]"
+            >
+              <option value="All">All Events ({totalRegistrations} Registered Athletes)</option>
+              {eventSummaries.map((evt) => (
+                <option key={evt.id} value={evt.id}>
+                  {evt.name} — ({evt.registeredCount} registered)
+                </option>
+              ))}
+            </select>
+
             {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-orange-500"
+              className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500"
             >
               <option value="All">All Statuses</option>
               <option value="Submitted">Submitted</option>
@@ -235,17 +293,39 @@ function InstitutionApplicationsContent() {
               <option value="Waitlisted">Waitlisted</option>
               <option value="Rejected">Rejected</option>
             </select>
+
+            {/* Sort Field */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500"
+            >
+              <option value="createdAt">Sort: Registration Date</option>
+              <option value="applicantName">Sort: Athlete Name</option>
+              <option value="athleteId">Sort: Athlete ID</option>
+              <option value="status">Sort: Status</option>
+            </select>
+
+            {/* Sort Order Toggle */}
+            <button
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              title={`Switch to ${sortOrder === "asc" ? "Descending" : "Ascending"}`}
+              className="px-3 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-blue-400" />
+              <span>{sortOrder === "asc" ? "Asc" : "Desc"}</span>
+            </button>
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full lg:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search applicant name, ID, or school..."
-              className="w-full pl-10 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+              placeholder="Search Athlete ID, name, mobile, or sport..."
+              className="w-full pl-10 pr-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -263,9 +343,9 @@ function InstitutionApplicationsContent() {
         ) : filtered.length === 0 ? (
           <div className="mt-10 text-center py-16 bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
             <FileText className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white">No Applications Found</h3>
+            <h3 className="text-lg font-bold text-white">No Registrations Found</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              No registrations matching your current filters. As students submit entries, they will appear here in real time.
+              No athlete registrations matching your current filters. When athletes register for your events, they will appear here automatically.
             </p>
           </div>
         ) : (
@@ -273,20 +353,24 @@ function InstitutionApplicationsContent() {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider font-bold border-b border-slate-800">
                 <tr>
-                  <th className="py-3.5 px-4">Application ID</th>
-                  <th className="py-3.5 px-4">Participant & School</th>
-                  <th className="py-3.5 px-4">Tournament</th>
-                  <th className="py-3.5 px-4">Type</th>
-                  <th className="py-3.5 px-4">Date</th>
-                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Athlete ID</th>
+                  <th className="py-3.5 px-4">Athlete Name</th>
+                  <th className="py-3.5 px-4">Sport / Category</th>
+                  <th className="py-3.5 px-4">Mobile Number</th>
+                  <th className="py-3.5 px-4">WhatsApp Number</th>
+                  <th className="py-3.5 px-4">Registration Date & Time</th>
+                  <th className="py-3.5 px-4">Registration Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {filtered.map((app) => {
-                  const appliedDate = new Date(app.createdAt).toLocaleDateString("en-IN", {
+                  const appliedTimestamp = new Date(app.createdAt).toLocaleString("en-IN", {
                     day: "numeric",
                     month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   });
 
                   return (
@@ -299,40 +383,45 @@ function InstitutionApplicationsContent() {
                         setOrganizerNotes(app.organizerNotes || "");
                       }}
                     >
+                      {/* Athlete ID */}
                       <td className="py-3.5 px-4 font-mono font-bold text-orange-400">
-                        {app.applicationNumber}
+                        {app.athleteId || app.applicationNumber}
                       </td>
 
+                      {/* Athlete Name */}
                       <td className="py-3.5 px-4">
-                        <p className="font-bold text-white group-hover:text-orange-400 transition-colors">
+                        <p className="font-bold text-white group-hover:text-blue-400 transition-colors">
                           {app.applicantName}
                         </p>
                         <p className="text-[11px] text-slate-400 truncate max-w-[180px]">
-                          {app.institutionName} • {app.age} Yrs
+                          {app.institutionName} &bull; {app.age} Yrs
                         </p>
                       </td>
 
+                      {/* Sport / Category */}
                       <td className="py-3.5 px-4">
                         <p className="font-semibold text-slate-200 truncate max-w-[180px]">
-                          {app.event.name}
+                          {app.sportCategory || app.event.sportGame || app.event.category}
                         </p>
-                        <p className="text-[10px] text-slate-400">{app.event.sportGame}</p>
+                        <p className="text-[10px] text-slate-400 truncate max-w-[180px]">{app.event.name}</p>
                       </td>
 
-                      <td className="py-3.5 px-4">
-                        {app.isTeam ? (
-                          <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 text-[10px] font-bold">
-                            Team: {app.teamName || "Yes"}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px]">
-                            Individual
-                          </span>
-                        )}
+                      {/* Mobile Number */}
+                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                        {app.contactNumber}
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-400 text-[11px]">{appliedDate}</td>
+                      {/* WhatsApp Number */}
+                      <td className="py-3.5 px-4 font-mono text-emerald-400">
+                        {app.whatsappNumber || app.contactNumber || "—"}
+                      </td>
 
+                      {/* Registration Date & Time */}
+                      <td className="py-3.5 px-4 text-slate-400 text-[11px]">
+                        {appliedTimestamp}
+                      </td>
+
+                      {/* Registration Status */}
                       <td className="py-3.5 px-4">
                         {app.status === "Approved" ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -411,12 +500,24 @@ function InstitutionApplicationsContent() {
               {/* Participant Details */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
                 <div>
+                  <span className="text-slate-400 uppercase text-[10px]">Athlete ID</span>
+                  <p className="font-bold text-orange-400 font-mono mt-0.5">{selectedApp.athleteId || selectedApp.applicationNumber}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase text-[10px]">Sport / Category</span>
+                  <p className="font-bold text-white mt-0.5">{selectedApp.sportCategory || selectedApp.event.sportGame || selectedApp.event.category}</p>
+                </div>
+                <div>
                   <span className="text-slate-400 uppercase text-[10px]">Age & Gender</span>
                   <p className="font-bold text-white mt-0.5">{selectedApp.age} Years • {selectedApp.gender}</p>
                 </div>
                 <div>
-                  <span className="text-slate-400 uppercase text-[10px]">Contact Mobile</span>
-                  <p className="font-bold text-white mt-0.5">{selectedApp.contactNumber}</p>
+                  <span className="text-slate-400 uppercase text-[10px]">Mobile Number</span>
+                  <p className="font-bold text-white font-mono mt-0.5">{selectedApp.contactNumber}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase text-[10px]">WhatsApp Number</span>
+                  <p className="font-bold text-emerald-400 font-mono mt-0.5">{selectedApp.whatsappNumber || selectedApp.contactNumber || "—"}</p>
                 </div>
                 <div>
                   <span className="text-slate-400 uppercase text-[10px]">Email</span>
