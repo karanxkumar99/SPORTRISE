@@ -29,7 +29,7 @@ export function getMediaUrl(url?: string | null): string {
     (process.env.NEXT_PUBLIC_API_URL
       ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
       : process.env.NODE_ENV === "production"
-      ? "https://sportrise.onrender.com"
+      ? "https://sportrise-backend.onrender.com"
       : "http://localhost:5000");
 
   const cleanPath = url.startsWith("/") ? url : `/${url}`;

@@ -4,7 +4,7 @@ function getNormalizedApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (!envUrl) {
     return process.env.NODE_ENV === "production"
-      ? "https://sportrise.onrender.com/api"
+      ? "https://sportrise-backend.onrender.com/api"
       : "http://localhost:5000/api";
   }
 
