@@ -7,7 +7,7 @@
     "dev": "tsx scripts/syncDbProvider.ts && tsx watch src/app.ts",
     "sync:db": "tsx scripts/syncDbProvider.ts",
     "build": "tsx scripts/syncDbProvider.ts --generate && tsc",
-    "render:build": "tsx scripts/syncDbProvider.ts --require-postgres && prisma db push --skip-generate && npm run build",
+    "render:build": "tsx scripts/syncDbProvider.ts --require-postgres && prisma db push --skip-generate && npm run build && tsx scripts/seedRealisticSportsData.ts",
     "render:start": "node dist/app.js",
     "start": "node dist/app.js",
     "prisma:generate": "tsx scripts/syncDbProvider.ts --generate",
