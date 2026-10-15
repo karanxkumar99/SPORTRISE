@@ -26,7 +26,10 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => {
     // Allow non-browser requests (mobile apps, server-to-server, curl)
     if (!origin) return callback(null, true);
 
